@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <!-- Vue.js -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="min-h-screen flex">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-md">
+            <div class="p-4 border-b">
+                <h2 class="text-xl font-semibold text-gray-800">Admin Panel</h2>
+            </div>
+            <nav class="mt-4">
+                <a v-for="item in menuItems" :key="item.id" :href="item.link"
+                   :class="['block p-3 flex items-center transition-colors duration-200',
+                           item.active ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50']">
+                    <i :class="['fas', item.icon, 'w-6']"></i>
+                    <span class="ml-2">{{ item.label }}</span>
+                </a>
+            </nav>
+            <div class="absolute bottom-0 w-64 p-4 border-t bg-white">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-700">Admin</p>
+                        <p class="text-xs text-gray-500">admin@admin.com</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1">
+            <!-- Navbar -->
+            <nav class="bg-white shadow-md">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between h-16">
+                        <div class="flex items-center">
+                            <h1 class="text-xl font-semibold text-gray-800">{{ title }}</h1>
+                        </div>
+                        <div class="flex items-center">
+                            <a @click="logout" href="#" class="text-red-600 hover:text-red-800 cursor-pointer">
+                                <i class="fas fa-sign-out-alt"></i> {{ logoutText }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Dashboard Content -->
+            <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div v-for="stat in stats" :key="stat.id" class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div :class="['p-3 rounded-full', stat.bgColor, stat.textColor]">
+                                <i :class="['fas', stat.icon, 'text-2xl']"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-gray-500 text-sm">{{ stat.label }}</p>
+                                <h3 class="text-2xl font-semibold text-gray-800">{{ stat.value }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">{{ activityTitle }}</h2>
+                        <div class="space-y-4">
+                            <div v-for="activity in activities" :key="activity.id" class="flex items-center">
+                                <div :class="['p-2 rounded-full', activity.bgColor, activity.textColor]">
+                                    <i :class="['fas', activity.icon]"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-gray-800">{{ activity.text }}</p>
+                                    <p class="text-sm text-gray-500">{{ activity.time }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    title: 'Dashboard',
+                    logoutText: 'Keluar',
+                    activityTitle: 'Aktivitas Terbaru',
+                    menuItems: [
+                        { id: 1, label: 'Dashboard', icon: 'fa-home', active: true, link: 'dashboard.html' },
+                        { id: 2, label: 'Manajemen Pelanggan', icon: 'fa-users', active: false, link: 'customer-management.html' },
+                        { id: 3, label: 'Pesanan Service', icon: 'fa-tools', active: false, link: '#' },
+                        { id: 4, label: 'Inventaris', icon: 'fa-boxes', active: false, link: '#' },
+                        { id: 5, label: 'Teknisi', icon: 'fa-user-cog', active: false, link: '#' },
+                        { id: 6, label: 'Laporan', icon: 'fa-chart-bar', active: false, link: '#' },
+                        { id: 7, label: 'Pengaturan', icon: 'fa-cog', active: false, link: '#' }
+                    ],
+                    stats: [
+                        {
+                            id: 1,
+                            label: 'Total Pengguna',
+                            value: '1,250',
+                            icon: 'fa-users',
+                            bgColor: 'bg-blue-100',
+                            textColor: 'text-blue-600'
+                        },
+                        {
+                            id: 2,
+                            label: 'Pendapatan',
+                            value: 'Rp 15.5M',
+                            icon: 'fa-chart-line',
+                            bgColor: 'bg-green-100',
+                            textColor: 'text-green-600'
+                        },
+                        {
+                            id: 3,
+                            label: 'Proyek Aktif',
+                            value: '25',
+                            icon: 'fa-tasks',
+                            bgColor: 'bg-purple-100',
+                            textColor: 'text-purple-600'
+                        }
+                    ],
+                    activities: [
+                        {
+                            id: 1,
+                            text: 'Pengguna baru terdaftar',
+                            time: '2 menit yang lalu',
+                            icon: 'fa-user-plus',
+                            bgColor: 'bg-blue-100',
+                            textColor: 'text-blue-600'
+                        },
+                        {
+                            id: 2,
+                            text: 'Pembayaran diterima',
+                            time: '15 menit yang lalu',
+                            icon: 'fa-dollar-sign',
+                            bgColor: 'bg-green-100',
+                            textColor: 'text-green-600'
+                        },
+                        {
+                            id: 3,
+                            text: 'Pemberitahuan sistem',
+                            time: '1 jam yang lalu',
+                            icon: 'fa-bell',
+                            bgColor: 'bg-yellow-100',
+                            textColor: 'text-yellow-600'
+                        }
+                    ]
+                }
+            },
+            methods: {
+                logout() {
+                    window.location.href = 'index.html';
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
