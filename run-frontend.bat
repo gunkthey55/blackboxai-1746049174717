@@ -1,0 +1,3 @@
+@echo off
+echo Starting Frontend Server...
+node server/static.js

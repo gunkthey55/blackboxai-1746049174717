@@ -1,0 +1,561 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Manajemen Device</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script src="shared/sidebar-unified.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app" class="min-h-screen flex">
+        <!-- Sidebar placeholder -->
+        <div id="sidebar"></div>
+
+        <!-- Main Content -->
+        <div class="flex-1 p-6 ml-64">
+            <h1 class="text-2xl font-semibold mb-6">Manajemen Device</h1>
+
+            <!-- Error Alert -->
+            <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                <strong class="font-bold">Error!</strong>
+                <span class="block sm:inline">{{ error }}</span>
+            </div>
+
+            <!-- Toggle Button -->
+            <button v-if="!showForm" @click="showForm = true" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                Tambah Data Device
+            </button>
+
+            <!-- Add/Edit Form -->
+            <div v-show="showForm" class="bg-white p-6 rounded-lg shadow mb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ sedangEdit ? 'Edit Device' : 'Tambah Device' }}</h2>
+                <form @submit.prevent="kirimForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="pelanggan">Pelanggan</label>
+                        <select id="pelanggan" v-model="form.id_pelanggan" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Pilih Pelanggan</option>
+                            <option v-for="p in daftarPelanggan" :key="p.id" :value="p.id">
+                                {{ p.nama }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="nama_device">Nama Device</label>
+                        <input type="text" id="nama_device" v-model="form.nama_device" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="tipe_device">Tipe Device</label>
+                        <input type="text" id="tipe_device" v-model="form.tipe_device"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="nomor_seri">Nomor Seri</label>
+                        <input type="text" id="nomor_seri" v-model="form.nomor_seri"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="tanggal_beli">Tanggal Pembelian</label>
+                        <input type="date" id="tanggal_beli" v-model="form.tanggal_beli"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="masa_garansi">Masa Garansi (bulan)</label>
+                        <input type="number" id="masa_garansi" v-model="form.masa_garansi" min="0"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="distributor">Distributor</label>
+                        <select id="distributor" v-model="form.id_distributor"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Pilih Distributor</option>
+                            <option v-for="d in daftarDistributor" :key="d.id" :value="d.id">
+                                {{ d.nama }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="catatan">Catatan</label>
+                        <textarea id="catatan" v-model="form.catatan" rows="3"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                    <div class="border-t pt-4 mt-4">
+                        <label class="block text-lg font-medium text-gray-700 mb-3">Foto Device</label>
+                        <div class="space-y-4">
+                            <p class="text-sm text-gray-500 mb-2">Pilih metode pengambilan foto:</p>
+                            <!-- Pilihan Metode Upload -->
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <button type="button" @click="metodeFoto = 'kamera'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center', 
+                                    metodeFoto === 'kamera' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-camera text-xl mr-3"></i>
+                                    Ambil dari Kamera
+                                </button>
+                                <button type="button" @click="metodeFoto = 'file'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center',
+                                    metodeFoto === 'file' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-file-upload text-xl mr-3"></i>
+                                    Upload dari File
+                                </button>
+                            </div>
+
+                            <!-- Kamera -->
+                            <div v-if="metodeFoto === 'kamera'" class="space-y-4 bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+                                <div v-if="!fotoKamera" class="space-y-4">
+                                    <div class="flex items-center space-x-2 text-gray-700">
+                                        <i class="fas fa-circle-notch fa-spin text-blue-600"></i>
+                                        <p class="text-sm">Status Kamera: {{ statusKamera }}</p>
+                                    </div>
+                            <video 
+                                ref="video" 
+                                class="w-full max-w-2xl mx-auto border-2 rounded-lg bg-black shadow-lg" 
+                                autoplay 
+                                playsinline 
+                                webkit-playsinline="true"
+                                x5-video-player-type="h5"
+                                x5-video-player-fullscreen="true"
+                                x5-video-orientation="portraint">
+                            </video>
+                                    <div class="flex justify-center">
+                                        <button type="button" @click="ambilFoto"
+                                            class="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center text-lg font-medium shadow-lg">
+                                            <i class="fas fa-camera text-xl mr-3"></i>Ambil Foto
+                                        </button>
+                                    </div>
+                                </div>
+                                <div v-if="fotoKamera" class="space-y-4">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                                        <p class="text-green-600 font-medium">Foto berhasil diambil!</p>
+                                    </div>
+                                    <canvas ref="canvas" class="w-full max-w-2xl mx-auto border-2 rounded-lg bg-white shadow-lg"></canvas>
+                                    <div class="flex justify-center">
+                                        <button type="button" @click="ambilFotoUlang"
+                                            class="bg-gray-600 text-white px-8 py-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center text-lg font-medium shadow-lg">
+                                            <i class="fas fa-redo text-xl mr-3"></i>Ambil Ulang
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- File Upload -->
+                            <div v-if="metodeFoto === 'file'">
+                                <input type="file" id="foto" ref="fotoInput" @change="handleFotoChange" accept="image/*" multiple
+                                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <p class="mt-2 text-sm text-gray-500">Anda dapat memilih beberapa foto sekaligus (maksimal 5 foto)</p>
+                            </div>
+
+                            <!-- Preview Foto -->
+                            <div v-if="form.foto_paths && form.foto_paths.length > 0 && !fotoKamera" class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+                                <div v-for="(foto, index) in form.foto_paths" :key="index" class="relative">
+                                    <img :src="'http://localhost:3001' + foto" 
+                                        class="w-full h-32 object-cover rounded shadow-sm" :alt="'Foto device ' + (index + 1)" />
+                                    <button type="button" @click="hapusFoto(index)" 
+                                        class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit"
+                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                            :disabled="sedangSubmit">
+                            {{ sedangSubmit ? 'Menyimpan...' : (sedangEdit ? 'Update' : 'Tambah') }}
+                        </button>
+                        <button type="button" @click="resetForm"
+                            class="ml-2 bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
+                            :disabled="sedangSubmit">
+                            Batal
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Device List -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">Daftar Device</h2>
+                <div v-if="sedangMuat" class="text-center py-4">
+                    <p class="text-gray-500">Memuat data...</p>
+                </div>
+                <table v-else class="w-full table-auto border-collapse border border-gray-300">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-gray-300 px-4 py-2 text-left">Pelanggan</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left">Nama Device</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left">Tipe</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left">Nomor Seri</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="device in daftarDevice" :key="device.id" class="hover:bg-gray-50">
+                            <td class="border border-gray-300 px-4 py-2">{{ getNamaPelanggan(device.id_pelanggan) }}</td>
+                            <td class="border border-gray-300 px-4 py-2">
+                                <div class="flex items-center">
+                                    <div v-if="device.foto_paths && device.foto_paths.length > 0" class="flex -space-x-2 mr-2">
+                                        <img v-for="(foto, index) in device.foto_paths.slice(0, 3)" :key="index"
+                                            :src="'http://localhost:3001' + foto" 
+                                            class="w-10 h-10 object-cover rounded-full border-2 border-white"
+                                            :alt="device.nama_device + ' foto ' + (index + 1)" />
+                                        <div v-if="device.foto_paths.length > 3"
+                                            class="w-10 h-10 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-sm text-gray-600">
+                                            +{{ device.foto_paths.length - 3 }}
+                                        </div>
+                                    </div>
+                                    {{ device.nama_device }}
+                                </div>
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2">{{ device.tipe_device }}</td>
+                            <td class="border border-gray-300 px-4 py-2">{{ device.nomor_seri }}</td>
+                            <td class="border border-gray-300 px-4 py-2 text-center space-x-2">
+                                <button @click="editDevice(device)"
+                                    class="text-blue-600 hover:underline">Edit</button>
+                                <button @click="hapusDevice(device.id)"
+                                    class="text-red-600 hover:underline">Hapus</button>
+                                <button @click="cetakTandaTerima(device.id)"
+                                    class="text-green-600 hover:underline">
+                                    <i class="fas fa-print mr-1"></i>Cetak
+                                </button>
+                            </td>
+                        </tr>
+                        <tr v-if="daftarDevice.length === 0">
+                            <td colspan="5" class="text-center py-4 text-gray-500">Tidak ada data device</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        // Register the sidebar component
+        const app = createApp({
+            data() {
+                return {
+                    daftarDevice: [],
+                    daftarPelanggan: [],
+                    daftarDistributor: [],
+                    form: {
+                        id: null,
+                        id_pelanggan: '',
+                        nama_device: '',
+                        tipe_device: '',
+                        nomor_seri: '',
+                        tanggal_beli: '',
+                        masa_garansi: '',
+                        id_distributor: '',
+                        catatan: '',
+                        foto_path: null
+                    },
+                    sedangEdit: false,
+                    sedangMuat: false,
+                    sedangSubmit: false,
+                    error: null,
+                    showForm: false,
+                    metodeFoto: 'file', // 'file' atau 'kamera'
+                    fotoKamera: null,
+                    stream: null,
+                    statusKamera: 'Memulai...',
+                    fotoToDelete: [] // Array untuk menyimpan foto yang akan dihapus
+                };
+            },
+            mounted() {
+                this.ambilDataDevice();
+                this.ambilDataPelanggan();
+                this.ambilDataDistributor();
+            },
+            methods: {
+                async ambilDataDistributor() {
+                    try {
+                        const response = await axios.get('http://localhost:3001/api/distributor');
+                        this.daftarDistributor = response.data;
+                    } catch (error) {
+                        console.error('Error mengambil data distributor:', error);
+                        this.error = 'Gagal memuat data distributor';
+                    }
+                },
+                async ambilDataDevice() {
+                    console.log('Mengambil data device...');
+                    this.sedangMuat = true;
+                    this.error = null;
+                    try {
+                        const response = await axios.get('http://localhost:3001/api/device');
+                        console.log('Data device diterima:', response.data);
+                        this.daftarDevice = response.data;
+                    } catch (error) {
+                        console.error('Error mengambil data device:', error);
+                        this.error = 'Gagal memuat data device. Silakan coba lagi.';
+                    } finally {
+                        this.sedangMuat = false;
+                    }
+                },
+                async ambilDataPelanggan() {
+                    try {
+                        const response = await axios.get('http://localhost:3001/api/pelanggan');
+                        this.daftarPelanggan = response.data;
+                    } catch (error) {
+                        console.error('Error mengambil data pelanggan:', error);
+                    }
+                },
+                getNamaPelanggan(id_pelanggan) {
+                    const pelanggan = this.daftarPelanggan.find(p => p.id === id_pelanggan);
+                    return pelanggan ? pelanggan.nama : '-';
+                },
+                async startCamera() {
+                    try {
+                        this.statusKamera = 'Meminta izin akses kamera...';
+                        console.log('Memulai akses kamera...');
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error('Browser tidak mendukung akses kamera');
+                        }
+                        
+                        // Konfigurasi kamera yang mendukung mobile
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment', // Menggunakan kamera belakang di mobile
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+
+                        // Untuk iOS Safari, perlu menambahkan playsinline
+                        if (this.$refs.video) {
+                            this.$refs.video.setAttribute('playsinline', 'true');
+                        }
+
+                        this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                        
+                        this.statusKamera = 'Kamera berhasil diakses, mengatur video stream...';
+                        console.log('Kamera berhasil diakses, mengatur video stream...');
+                        const videoElement = this.$refs.video;
+                        if (!videoElement) {
+                            throw new Error('Element video tidak ditemukan');
+                        }
+                        
+                        videoElement.srcObject = this.stream;
+                        videoElement.onloadedmetadata = () => {
+                            this.statusKamera = 'Kamera siap digunakan';
+                            console.log('Video stream siap');
+                            videoElement.play();
+                        };
+                    } catch (error) {
+                        const errorMsg = `Gagal mengakses kamera: ${error.message}. Pastikan kamera tersedia dan izin diberikan.`;
+                        console.error('Error mengakses kamera:', error);
+                        this.statusKamera = 'Error: ' + errorMsg;
+                        this.error = errorMsg;
+                    }
+                },
+
+                stopCamera() {
+                    if (this.stream) {
+                        this.stream.getTracks().forEach(track => track.stop());
+                        this.stream = null;
+                    }
+                },
+
+                ambilFoto() {
+                    try {
+                        console.log('Mengambil foto...');
+                        const video = this.$refs.video;
+                        const canvas = this.$refs.canvas;
+                        
+                        if (!video || !canvas) {
+                            throw new Error('Element video atau canvas tidak ditemukan');
+                        }
+                        
+                        // Pastikan video sudah siap
+                        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                            throw new Error('Video stream belum siap');
+                        }
+                        
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        const context = canvas.getContext('2d');
+                        context.drawImage(video, 0, 0);
+                        
+                        // Preview foto yang diambil
+                        this.form.foto_path = canvas.toDataURL('image/jpeg');
+                        console.log('Foto berhasil diambil');
+                        
+                        this.fotoKamera = true;
+                        this.stopCamera();
+                    } catch (error) {
+                        console.error('Error mengambil foto:', error);
+                        this.error = `Gagal mengambil foto: ${error.message}`;
+                    }
+                },
+
+                ambilFotoUlang() {
+                    this.fotoKamera = false;
+                    this.startCamera();
+                },
+
+                async kirimForm() {
+                    console.log('Mengirim form...', this.form);
+                    this.sedangSubmit = true;
+                    this.error = null;
+                    try {
+                        const formData = new FormData();
+                        formData.append('id_pelanggan', this.form.id_pelanggan);
+                        formData.append('nama_device', this.form.nama_device);
+                        formData.append('tipe_device', this.form.tipe_device);
+                        formData.append('nomor_seri', this.form.nomor_seri);
+                        formData.append('tanggal_beli', this.form.tanggal_beli);
+                        formData.append('masa_garansi', this.form.masa_garansi);
+                        formData.append('id_distributor', this.form.id_distributor);
+                        formData.append('catatan', this.form.catatan);
+                        
+                        // Handle foto dari kamera atau file
+                        if (this.metodeFoto === 'kamera' && this.fotoKamera) {
+                            // Convert canvas to blob
+                            const canvas = this.$refs.canvas;
+                            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+                            formData.append('fotos', blob, 'camera-photo.jpg');
+                        } else if (this.metodeFoto === 'file' && this.$refs.fotoInput.files.length > 0) {
+                            Array.from(this.$refs.fotoInput.files).forEach(file => {
+                                formData.append('fotos', file);
+                            });
+                        }
+
+                        // Add list of photos to delete if any
+                        if (this.fotoToDelete.length > 0) {
+                            formData.append('hapus_foto', JSON.stringify(this.fotoToDelete));
+                        }
+
+                        if (this.sedangEdit) {
+                            console.log('Mengupdate device:', this.form.id);
+                            await axios.put(`http://localhost:3001/api/device/${this.form.id}`, formData, {
+                                headers: {
+                                    'Content-Type': 'multipart/form-data'
+                                }
+                            });
+                        } else {
+                            console.log('Menambah device baru');
+                            await axios.post('http://localhost:3001/api/device', formData, {
+                                headers: {
+                                    'Content-Type': 'multipart/form-data'
+                                }
+                            });
+                        }
+                        console.log('Form berhasil dikirim');
+                        this.resetForm();
+                        this.ambilDataDevice();
+                    } catch (error) {
+                        console.error('Error mengirim form:', error);
+                        this.error = 'Gagal menyimpan data. Silakan coba lagi.';
+                    } finally {
+                        this.sedangSubmit = false;
+                    }
+                },
+                editDevice(device) {
+                    console.log('Edit device:', device);
+                    this.form = { ...device };
+                    this.sedangEdit = true;
+                    this.showForm = true;
+                    if (this.$refs.fotoInput) {
+                        this.$refs.fotoInput.value = '';
+                    }
+                },
+                handleFotoChange(event) {
+                    const files = Array.from(event.target.files);
+                    if (files.length > 0) {
+                        // Preview foto yang dipilih
+                        if (!this.form.foto_paths) {
+                            this.form.foto_paths = [];
+                        }
+                        files.forEach(file => {
+                            const url = URL.createObjectURL(file);
+                            this.form.foto_paths.push(url);
+                        });
+                    }
+                },
+
+                hapusFoto(index) {
+                    const foto = this.form.foto_paths[index];
+                    if (foto.startsWith('http://localhost:3001/uploads/')) {
+                        // Jika foto dari server, tambahkan ke array fotoToDelete
+                        this.fotoToDelete.push(foto.replace('http://localhost:3001', ''));
+                    }
+                    this.form.foto_paths.splice(index, 1);
+                },
+                async hapusDevice(id) {
+                    if (confirm('Apakah Anda yakin ingin menghapus device ini?')) {
+                        console.log('Menghapus device:', id);
+                        this.error = null;
+                        try {
+                            await axios.delete(`http://localhost:3001/api/device/${id}`);
+                            console.log('Device berhasil dihapus');
+                            this.ambilDataDevice();
+                        } catch (error) {
+                            console.error('Error menghapus device:', error);
+                            this.error = 'Gagal menghapus data. Silakan coba lagi.';
+                        }
+                    }
+                },
+                async cetakTandaTerima(id) {
+                    try {
+                        // Open receipt in new window
+                        window.open(`http://localhost:3001/api/device/${id}/receipt`, '_blank');
+                    } catch (error) {
+                        console.error('Error mencetak tanda terima:', error);
+                        this.error = 'Gagal mencetak tanda terima. Silakan coba lagi.';
+                    }
+                },
+                resetForm() {
+                    console.log('Reset form');
+                    this.form = {
+                        id: null,
+                        id_pelanggan: '',
+                        nama_device: '',
+                        tipe_device: '',
+                        nomor_seri: '',
+                        tanggal_beli: '',
+                        masa_garansi: '',
+                        id_distributor: '',
+                        catatan: '',
+                        foto_paths: []
+                    };
+                    if (this.$refs.fotoInput) {
+                        this.$refs.fotoInput.value = '';
+                    }
+                    this.fotoKamera = false;
+                    this.stopCamera();
+                    this.sedangEdit = false;
+                    this.error = null;
+                    this.showForm = false;
+                }
+            },
+            watch: {
+                metodeFoto(newValue) {
+                    if (newValue === 'kamera') {
+                        this.$nextTick(() => {
+                            this.startCamera();
+                        });
+                    } else {
+                        this.stopCamera();
+                        this.fotoKamera = false;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

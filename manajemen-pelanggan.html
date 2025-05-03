@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Manajemen Pelanggan</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .pesan-error {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app" class="min-h-screen flex">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-md fixed h-screen overflow-y-auto">
+            <div class="p-4 border-b">
+                <h2 class="text-xl font-semibold text-gray-800">Panel Admin</h2>
+            </div>
+            <nav class="mt-4">
+                <div class="p-3 flex items-center cursor-pointer transition-colors duration-200 bg-blue-50 text-blue-600">
+                    <i class="fas fa-users w-6"></i>
+                    <span class="ml-2">Manajemen Pelanggan</span>
+                </div>
+                <a href="manajemen-device.html" class="block p-3 flex items-center cursor-pointer transition-colors duration-200 hover:bg-blue-50 hover:text-blue-600">
+                    <i class="fas fa-laptop w-6"></i>
+                    <span class="ml-2">Manajemen Device</span>
+                </a>
+                <a href="manajemen-peminjaman.html" class="block p-3 flex items-center cursor-pointer transition-colors duration-200 hover:bg-blue-50 hover:text-blue-600">
+                    <i class="fas fa-exchange-alt w-6"></i>
+                    <span class="ml-2">Peminjaman Part</span>
+                </a>
+                <a href="manajemen-garansi.html" class="block p-3 flex items-center cursor-pointer transition-colors duration-200 hover:bg-blue-50 hover:text-blue-600">
+                    <i class="fas fa-shield-alt w-6"></i>
+                    <span class="ml-2">Manajemen Garansi</span>
+                </a>
+            </nav>
+            <div class="absolute bottom-0 w-64 p-4 border-t bg-white">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-700">Admin</p>
+                        <p class="text-xs text-gray-500">admin@admin.com</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Konten Utama -->
+        <div class="flex-1 p-6 ml-64">
+            <h1 class="text-2xl font-semibold mb-6">Manajemen Pelanggan</h1>
+
+            <!-- Pesan Error -->
+            <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                <strong class="font-bold">Error!</strong>
+                <span class="block sm:inline">{{ error }}</span>
+            </div>
+
+            <!-- Toggle Button -->
+            <button v-if="!showForm" @click="showForm = true" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                Tambah Data Pelanggan
+            </button>
+
+            <!-- Form Tambah/Edit -->
+            <div v-show="showForm" class="bg-white p-6 rounded-lg shadow mb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ sedangEdit ? 'Edit Pelanggan' : 'Tambah Pelanggan' }}</h2>
+                <form @submit.prevent="kirimForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="nama">Nama</label>
+                        <input type="text" id="nama" v-model="form.nama" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="email">Email</label>
+                        <input type="email" id="email" v-model="form.email" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="telepon">Telepon</label>
+                        <input type="text" id="telepon" v-model="form.telepon"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <button type="submit"
+                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                            :disabled="sedangSubmit">
+                            {{ sedangSubmit ? 'Menyimpan...' : (sedangEdit ? 'Update' : 'Tambah') }}
+                        </button>
+                        <button type="button" @click="resetForm"
+                            class="ml-2 bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
+                            :disabled="sedangSubmit">
+                            Batal
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Daftar Pelanggan -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">Daftar Pelanggan</h2>
+                <div v-if="sedangMuat" class="text-center py-4">
+                    <p class="text-gray-500">Memuat data...</p>
+                </div>
+                <table v-else class="w-full table-auto border-collapse border border-gray-300">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-gray-300 px-4 py-2 text-left">Nama</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left">Email</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left">Telepon</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="pelanggan in daftarPelanggan" :key="pelanggan.id" class="hover:bg-gray-50">
+                            <td class="border border-gray-300 px-4 py-2">{{ pelanggan.nama }}</td>
+                            <td class="border border-gray-300 px-4 py-2">{{ pelanggan.email }}</td>
+                            <td class="border border-gray-300 px-4 py-2">{{ pelanggan.telepon }}</td>
+                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                <button @click="editPelanggan(pelanggan)"
+                                    class="text-blue-600 hover:underline mr-2">Edit</button>
+                                <button @click="hapusPelanggan(pelanggan.id)"
+                                    class="text-red-600 hover:underline">Hapus</button>
+                            </td>
+                        </tr>
+                        <tr v-if="daftarPelanggan.length === 0">
+                            <td colspan="4" class="text-center py-4 text-gray-500">Tidak ada data pelanggan</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    daftarPelanggan: [],
+                    form: {
+                        id: null,
+                        nama: '',
+                        email: '',
+                        telepon: ''
+                    },
+                    sedangEdit: false,
+                    sedangMuat: false,
+                    sedangSubmit: false,
+                    error: null,
+                    showForm: false
+                };
+            },
+            mounted() {
+                console.log('Aplikasi dimuat, mengambil data pelanggan...');
+                this.ambilDataPelanggan();
+            },
+            methods: {
+                async ambilDataPelanggan() {
+                    console.log('Mengambil data pelanggan...');
+                    this.sedangMuat = true;
+                    this.error = null;
+                    try {
+                        const response = await axios.get('http://localhost:3001/api/pelanggan');
+                        console.log('Data pelanggan diterima:', response.data);
+                        this.daftarPelanggan = response.data;
+                    } catch (error) {
+                        console.error('Error mengambil data pelanggan:', error);
+                        this.error = 'Gagal memuat data pelanggan. Silakan coba lagi.';
+                    } finally {
+                        this.sedangMuat = false;
+                    }
+                },
+                async kirimForm() {
+                    console.log('Mengirim form...', this.form);
+                    this.sedangSubmit = true;
+                    this.error = null;
+                    try {
+                        if (this.sedangEdit) {
+                            console.log('Mengupdate pelanggan:', this.form.id);
+                            await axios.put(`http://localhost:3001/api/pelanggan/${this.form.id}`, this.form);
+                        } else {
+                            console.log('Menambah pelanggan baru');
+                            await axios.post('http://localhost:3001/api/pelanggan', this.form);
+                        }
+                        console.log('Form berhasil dikirim');
+                        this.resetForm();
+                        this.ambilDataPelanggan();
+                    } catch (error) {
+                        console.error('Error mengirim form:', error);
+                        this.error = 'Gagal menyimpan data. Silakan coba lagi.';
+                    } finally {
+                        this.sedangSubmit = false;
+                    }
+                },
+                editPelanggan(pelanggan) {
+                    console.log('Edit pelanggan:', pelanggan);
+                    this.form = { ...pelanggan };
+                    this.sedangEdit = true;
+                    this.showForm = true;
+                },
+                async hapusPelanggan(id) {
+                    if (confirm('Apakah Anda yakin ingin menghapus pelanggan ini?')) {
+                        console.log('Menghapus pelanggan:', id);
+                        this.error = null;
+                        try {
+                            await axios.delete(`http://localhost:3001/api/pelanggan/${id}`);
+                            console.log('Pelanggan berhasil dihapus');
+                            this.ambilDataPelanggan();
+                        } catch (error) {
+                            console.error('Error menghapus pelanggan:', error);
+                            this.error = 'Gagal menghapus data. Silakan coba lagi.';
+                        }
+                    }
+                },
+                resetForm() {
+                    console.log('Reset form');
+                    this.form = { id: null, nama: '', email: '', telepon: '' };
+                    this.sedangEdit = false;
+                    this.error = null;
+                    this.showForm = false;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

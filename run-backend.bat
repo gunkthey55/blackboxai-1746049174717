@@ -1,0 +1,6 @@
+@echo off
+cd server
+echo Installing backend dependencies...
+npm install
+echo Starting backend server...
+node index.js
