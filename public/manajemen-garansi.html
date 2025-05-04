@@ -1,0 +1,305 @@
+[Previous content up to line 479, then continuing with:]
+                        this.sedangMuat = false;
+                    }
+                },
+                async startCamera() {
+                    try {
+                        this.statusKamera = 'Meminta izin akses kamera...';
+                        console.log('Memulai akses kamera...');
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error('Browser tidak mendukung akses kamera');
+                        }
+                        
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+
+                        if (this.$refs.video) {
+                            this.$refs.video.setAttribute('playsinline', 'true');
+                        }
+
+                        this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                        
+                        this.statusKamera = 'Kamera berhasil diakses, mengatur video stream...';
+                        console.log('Kamera berhasil diakses, mengatur video stream...');
+                        const videoElement = this.$refs.video;
+                        if (!videoElement) {
+                            throw new Error('Element video tidak ditemukan');
+                        }
+                        
+                        videoElement.srcObject = this.stream;
+                        videoElement.onloadedmetadata = () => {
+                            this.statusKamera = 'Kamera siap digunakan';
+                            console.log('Video stream siap');
+                            videoElement.play();
+                        };
+                    } catch (error) {
+                        const errorMsg = `Gagal mengakses kamera: ${error.message}. Pastikan kamera tersedia dan izin diberikan.`;
+                        console.error('Error mengakses kamera:', error);
+                        this.statusKamera = 'Error: ' + errorMsg;
+                        this.error = errorMsg;
+                    }
+                },
+                stopCamera() {
+                    if (this.stream) {
+                        this.stream.getTracks().forEach(track => track.stop());
+                        this.stream = null;
+                    }
+                },
+                ambilFoto() {
+                    try {
+                        console.log('Mengambil foto...');
+                        const video = this.$refs.video;
+                        const canvas = this.$refs.canvas;
+                        
+                        if (!video || !canvas) {
+                            throw new Error('Element video atau canvas tidak ditemukan');
+                        }
+                        
+                        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                            throw new Error('Video stream belum siap');
+                        }
+                        
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        const context = canvas.getContext('2d');
+                        context.drawImage(video, 0, 0);
+                        
+                        this.form.foto_tanda_terima_url = canvas.toDataURL('image/jpeg');
+                        console.log('Foto berhasil diambil');
+                        
+                        this.fotoKamera = true;
+                        this.stopCamera();
+
+                        // Convert canvas to blob and store as file
+                        canvas.toBlob(blob => {
+                            this.form.foto_tanda_terima = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+                        }, 'image/jpeg');
+                    } catch (error) {
+                        console.error('Error mengambil foto:', error);
+                        this.error = `Gagal mengambil foto: ${error.message}`;
+                    }
+                },
+                ambilFotoUlang() {
+                    this.fotoKamera = false;
+                    this.startCamera();
+                },
+                hapusFoto(index) {
+                    const foto = this.form.foto_paths[index];
+                    if (foto.startsWith('/uploads/')) {
+                        this.fotoToDelete.push(foto);
+                    }
+                    this.form.foto_paths.splice(index, 1);
+                },
+                async handleFotoUpload(event) {
+                    const files = Array.from(event.target.files);
+                    if (files.length > 0) {
+                        try {
+                            for (const file of files) {
+                                const formData = new FormData();
+                                formData.append('foto', file);
+                                
+                                const response = await axios.post('/api/upload', formData, {
+                                    headers: {
+                                        'Content-Type': 'multipart/form-data'
+                                    }
+                                });
+                                
+                                if (!this.form.foto_paths) {
+                                    this.form.foto_paths = [];
+                                }
+                                this.form.foto_paths.push(response.data.path);
+                            }
+                        } catch (error) {
+                            console.error('Error uploading foto:', error);
+                            this.error = 'Gagal mengunggah foto. Silakan coba lagi.';
+                        }
+                    }
+                },
+                async kirimForm() {
+                    this.sedangSubmit = true;
+                    this.error = null;
+                    try {
+                        const formData = new FormData();
+                        for (const key in this.form) {
+                            if (key === 'foto_paths' && this.form[key]) {
+                                formData.append('foto_paths', JSON.stringify(this.form[key]));
+                            } else if (this.form[key] !== null) {
+                                formData.append(key, this.form[key]);
+                            }
+                        }
+
+                        if (this.fotoToDelete.length > 0) {
+                            formData.append('hapus_foto', JSON.stringify(this.fotoToDelete));
+                        }
+
+                        if (this.sedangEdit) {
+                            await axios.put(`/api/klaim-garansi/${this.form.id}`, formData, {
+                                headers: {
+                                    'Content-Type': 'multipart/form-data'
+                                }
+                            });
+                        } else {
+                            await axios.post('/api/klaim-garansi', formData, {
+                                headers: {
+                                    'Content-Type': 'multipart/form-data'
+                                }
+                            });
+                        }
+                        this.resetForm();
+                        this.ambilDataKlaim();
+                    } catch (error) {
+                        console.error('Error mengirim form:', error);
+                        this.error = 'Gagal menyimpan data klaim garansi';
+                    } finally {
+                        this.sedangSubmit = false;
+                    }
+                },
+                editKlaim(klaim) {
+                    this.form = { ...klaim };
+                    this.sedangEdit = true;
+                    this.showForm = true;
+                },
+                lihatDetail(klaim) {
+                    this.detailKlaim = klaim;
+                    this.modalDetail = true;
+                },
+                tutupModal() {
+                    this.modalDetail = false;
+                    this.detailKlaim = {};
+                },
+                resetForm() {
+                    this.form = {
+                        id: null,
+                        id_pelanggan: '',
+                        id_device: '',
+                        id_distributor: '',
+                        deskripsi_masalah: '',
+                        status: 'PENDING',
+                        tanggal_kirim_distributor: '',
+                        tanggal_terima_kembali: '',
+                        resolusi: '',
+                        catatan: '',
+                        foto_paths: [],
+                        foto_tanda_terima: null,
+                        foto_tanda_terima_url: null
+                    };
+                    this.sedangEdit = false;
+                    this.error = null;
+                    this.showForm = false;
+                    this.fotoKamera = false;
+                    this.fotoToDelete = [];
+                    if (this.$refs.fotoInput) {
+                        this.$refs.fotoInput.value = '';
+                    }
+                },
+                async startScanner() {
+                    try {
+                        this.statusKamera = 'Meminta izin akses kamera...';
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error('Browser tidak mendukung akses kamera');
+                        }
+                        
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+
+                        this.streamScanner = await navigator.mediaDevices.getUserMedia(constraints);
+                        const videoElement = this.$refs.videoScanner;
+                        if (!videoElement) {
+                            throw new Error('Element video tidak ditemukan');
+                        }
+                        
+                        videoElement.srcObject = this.streamScanner;
+                        videoElement.setAttribute('playsinline', true);
+                        
+                        videoElement.onloadedmetadata = () => {
+                            this.statusKamera = 'Kamera siap digunakan';
+                            videoElement.play();
+                            this.scanQRCode();
+                        };
+                    } catch (error) {
+                        const errorMsg = `Gagal mengakses kamera: ${error.message}. Pastikan kamera tersedia dan izin diberikan.`;
+                        console.error('Error mengakses kamera:', error);
+                        this.statusKamera = 'Error: ' + errorMsg;
+                        this.error = errorMsg;
+                    }
+                },
+                stopScanner() {
+                    if (this.streamScanner) {
+                        this.streamScanner.getTracks().forEach(track => track.stop());
+                        this.streamScanner = null;
+                    }
+                },
+                scanQRCode() {
+                    if (!this.streamScanner) return;
+
+                    const videoElement = this.$refs.videoScanner;
+                    if (!videoElement) return;
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+
+                    const scanInterval = setInterval(() => {
+                        if (!this.streamScanner || this.serialTerdeteksi) {
+                            clearInterval(scanInterval);
+                            return;
+                        }
+
+                        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                            canvas.width = videoElement.videoWidth;
+                            canvas.height = videoElement.videoHeight;
+                            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                            
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                console.log('QR Code terdeteksi:', code.data);
+                                this.form.nomor_seri = code.data;
+                                this.serialTerdeteksi = true;
+                                this.stopScanner();
+                            }
+                        }
+                    }, 100);
+                },
+                scanUlang() {
+                    this.serialTerdeteksi = false;
+                    this.form.nomor_seri = '';
+                    this.startScanner();
+                }
+            },
+            watch: {
+                metodeFoto(newValue) {
+                    if (newValue === 'kamera') {
+                        this.$nextTick(() => {
+                            this.startCamera();
+                        });
+                    } else {
+                        this.stopCamera();
+                        this.fotoKamera = false;
+                    }
+                },
+                metodeInput(newValue) {
+                    if (newValue === 'kamera') {
+                        this.$nextTick(() => {
+                            this.startScanner();
+                        });
+                    } else {
+                        this.stopScanner();
+                        this.serialTerdeteksi = false;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

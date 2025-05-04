@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Manajemen Peminjaman Part</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script src="shared/sidebar-new.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .pesan-error {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app" class="min-h-screen flex">
+        <!-- Sidebar -->
+        <div id="sidebar"></div>
+
+        <!-- Konten Utama -->
+        <div class="flex-1 p-6 ml-64">
+            <h1 class="text-2xl font-semibold mb-6">Manajemen Peminjaman Part</h1>
+
+            <!-- Pesan Error -->
+            <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                <strong class="font-bold">Error!</strong>
+                <span class="block sm:inline">{{ error }}</span>
+            </div>
+
+            <!-- Toggle Button -->
+            <button v-if="!showForm" @click="showForm = true" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                Tambah Data Peminjaman
+            </button>
+
+            <!-- Form Tambah/Edit -->
+            <div v-show="showForm" class="bg-white p-6 rounded-lg shadow mb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ sedangEdit ? 'Edit Peminjaman' : 'Tambah Peminjaman' }}</h2>
+                <form @submit.prevent="kirimForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="pelanggan">Pelanggan</label>
+                        <select id="pelanggan" v-model="form.id_pelanggan" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Pilih Pelanggan</option>
+                            <option v-for="pelanggan in daftarPelanggan" :key="pelanggan.id" :value="pelanggan.id">
+                                {{ pelanggan.nama }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
+                        <div class="space-y-4">
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <button type="button" @click="metodeInput = 'kamera'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center', 
+                                    metodeInput === 'kamera' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-camera text-xl mr-3"></i>
+                                    Scan dengan Kamera
+                                </button>
+                                <button type="button" @click="metodeInput = 'manual'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center',
+                                    metodeInput === 'manual' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-keyboard text-xl mr-3"></i>
+                                    Input Manual
+                                </button>
+                            </div>
+
+                            <!-- Kamera Scanner -->
+                            <div v-if="metodeInput === 'kamera'" class="space-y-4 bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+                                <div v-if="!serialTerdeteksi" class="space-y-4">
+                                    <div class="flex items-center space-x-2 text-gray-700">
+                                        <i class="fas fa-circle-notch fa-spin text-blue-600"></i>
+                                        <p class="text-sm">Status Kamera: {{ statusKamera }}</p>
+                                    </div>
+                                    <video 
+                                        ref="videoScanner" 
+                                        class="w-full max-w-2xl mx-auto border-2 rounded-lg bg-black shadow-lg" 
+                                        autoplay 
+                                        playsinline>
+                                    </video>
+                                    <div class="text-center text-sm text-gray-600">
+                                        <p>Arahkan kamera ke barcode/QR code serial number</p>
+                                    </div>
+                                </div>
+                                <div v-if="serialTerdeteksi" class="space-y-4">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                                        <p class="text-green-600 font-medium">Serial Number Terdeteksi!</p>
+                                    </div>
+                                    <div class="p-4 bg-white rounded-lg border border-gray-200">
+                                        <p class="text-lg font-medium">{{ form.nomor_seri }}</p>
+                                    </div>
+                                    <div class="flex justify-center">
+                                        <button type="button" @click="scanUlang"
+                                            class="bg-gray-600 text-white px-8 py-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center text-lg font-medium shadow-lg">
+                                            <i class="fas fa-redo text-xl mr-3"></i>Scan Ulang
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Manual Input -->
+                            <div v-if="metodeInput === 'manual'">
+                                <input type="text" v-model="form.nomor_seri" placeholder="Masukkan Serial Number"
+                                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="device">Device</label>
+                        <select id="device" v-model="form.id_device" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Pilih Device</option>
+                            <option v-for="device in daftarDevice" :key="device.id" :value="device.id">
+                                {{ device.nama_device }} - {{ device.nomor_seri || 'No SN' }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="nama_part_normal">Part Normal</label>
+                        <input type="text" id="nama_part_normal" v-model="form.nama_part_normal" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="nama_part_rusak">Part Rusak</label>
+                        <input type="text" id="nama_part_rusak" v-model="form.nama_part_rusak" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="tanggal_pinjam">Tanggal Pinjam</label>
+                        <input type="datetime-local" id="tanggal_pinjam" v-model="form.tanggal_pinjam" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="perkiraan_tanggal_kembali">Perkiraan Tanggal Kembali</label>
+                        <input type="datetime-local" id="perkiraan_tanggal_kembali" v-model="form.perkiraan_tanggal_kembali" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="catatan">Catatan</label>
+                        <textarea id="catatan" v-model="form.catatan" rows="3"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                    <div>
+                        <button type="submit"
+                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                            :disabled="sedangSubmit">
+                            {{ sedangSubmit ? 'Menyimpan...' : (sedangEdit ? 'Update' : 'Tambah') }}
+                        </button>
+                        <button type="button" @click="resetForm"
+                            class="ml-2 bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
+                            :disabled="sedangSubmit">
+                            Batal
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Daftar Peminjaman -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">Daftar Peminjaman</h2>
+                <div v-if="sedangMuat" class="text-center py-4">
+                    <p class="text-gray-500">Memuat data...</p>
+                </div>
+                <table v-else class="w-full table-auto border-collapse border border-gray-300">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-gray-300 px-4 py-2 text-left">Pelanggan</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left">Part Normal</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left">Part Rusak</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left">Tanggal Pinjam</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left">Status</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="peminjaman in daftarPeminjaman" :key="peminjaman.id" class="hover:bg-gray-50">
+                            <td class="border border-gray-300 px-4 py-2">{{ peminjaman.nama_pelanggan }}</td>
+                            <td class="border border-gray-300 px-4 py-2">
+                                {{ peminjaman.nama_device }} (SN: {{ peminjaman.nomor_seri || 'No SN' }}) - {{ peminjaman.nama_part_normal }}
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2">{{ peminjaman.nama_part_rusak }}</td>
+                            <td class="border border-gray-300 px-4 py-2">{{ formatTanggal(peminjaman.tanggal_pinjam) }}</td>
+                            <td class="border border-gray-300 px-4 py-2">
+                                <span :class="{
+                                    'px-2 py-1 rounded text-sm font-medium': true,
+                                    'bg-yellow-100 text-yellow-800': peminjaman.status === 'DIPINJAM',
+                                    'bg-green-100 text-green-800': peminjaman.status === 'DIKEMBALIKAN'
+                                }">
+                                    {{ peminjaman.status }}
+                                </span>
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                <button v-if="peminjaman.status === 'DIPINJAM'"
+                                    @click="kembalikanPart(peminjaman)"
+                                    class="text-green-600 hover:underline mr-2">Kembalikan</button>
+                                <button v-if="peminjaman.status === 'DIPINJAM'"
+                                    @click="editPeminjaman(peminjaman)"
+                                    class="text-blue-600 hover:underline mr-2">Edit</button>
+                                <button @click="lihatDetail(peminjaman)"
+                                    class="text-gray-600 hover:underline">Detail</button>
+                            </td>
+                        </tr>
+                        <tr v-if="daftarPeminjaman.length === 0">
+                            <td colspan="6" class="text-center py-4 text-gray-500">Tidak ada data peminjaman</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Modal Detail -->
+            <div v-if="modalDetail" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+                    <h3 class="text-lg font-semibold mb-4">Detail Peminjaman</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600">Pelanggan</p>
+                                <p class="font-medium">{{ detailPeminjaman.nama_pelanggan }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Status</p>
+                                <p class="font-medium">{{ detailPeminjaman.status }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Part Normal</p>
+                                <p class="font-medium">{{ detailPeminjaman.nama_part_normal }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Part Rusak</p>
+                                <p class="font-medium">{{ detailPeminjaman.nama_part_rusak }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Tanggal Pinjam</p>
+                                <p class="font-medium">{{ formatTanggal(detailPeminjaman.tanggal_pinjam) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Perkiraan Tanggal Kembali</p>
+                                <p class="font-medium">{{ formatTanggal(detailPeminjaman.perkiraan_tanggal_kembali) }}</p>
+                            </div>
+                            <div v-if="detailPeminjaman.tanggal_kembali_aktual">
+                                <p class="text-sm text-gray-600">Tanggal Kembali Aktual</p>
+                                <p class="font-medium">{{ formatTanggal(detailPeminjaman.tanggal_kembali_aktual) }}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Catatan</p>
+                            <p class="font-medium">{{ detailPeminjaman.catatan || '-' }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <button @click="tutupModal"
+                            class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition">
+                            Tutup
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    daftarPelanggan: [],
+                    daftarDevice: [],
+                    daftarPeminjaman: [],
+                    form: {
+                        id: null,
+                        id_pelanggan: '',
+                        id_device: '',
+                        nama_part_normal: '',
+                        nama_part_rusak: '',
+                        tanggal_pinjam: '',
+                        perkiraan_tanggal_kembali: '',
+                        catatan: ''
+                    },
+                    sedangEdit: false,
+                    sedangMuat: false,
+                    sedangSubmit: false,
+                    error: null,
+                    modalDetail: false,
+                    detailPeminjaman: {},
+                    showForm: false,
+                    metodeInput: 'manual',
+                    statusKamera: 'Memulai...',
+                    serialTerdeteksi: false,
+                    streamScanner: null
+                };
+            },
+            mounted() {
+                this.ambilDataPelanggan();
+                this.ambilDataDevice();
+                this.ambilDataPeminjaman();
+            },
+            methods: {
+                formatTanggal(tanggal) {
+                    return new Date(tanggal).toLocaleString('id-ID', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+                async ambilDataDevice() {
+                    try {
+                        const response = await axios.get('/api/device');
+                        this.daftarDevice = response.data;
+                    } catch (error) {
+                        console.error('Error mengambil data device:', error);
+                        this.error = 'Gagal memuat data device';
+                    }
+                },
+                async ambilDataPelanggan() {
+                    try {
+                        const response = await axios.get('/api/pelanggan');
+                        this.daftarPelanggan = response.data;
+                    } catch (error) {
+                        console.error('Error mengambil data pelanggan:', error);
+                        this.error = 'Gagal memuat data pelanggan';
+                    }
+                },
+                async ambilDataPeminjaman() {
+                    this.sedangMuat = true;
+                    this.error = null;
+                    try {
+                        const response = await axios.get('/api/peminjaman-part');
+                        this.daftarPeminjaman = response.data;
+                    } catch (error) {
+                        console.error('Error mengambil data peminjaman:', error);
+                        this.error = 'Gagal memuat data peminjaman';
+                    } finally {
+                        this.sedangMuat = false;
+                    }
+                },
+                async kirimForm() {
+                    this.sedangSubmit = true;
+                    this.error = null;
+                    try {
+                        if (this.sedangEdit) {
+                            await axios.put(`/api/peminjaman-part/${this.form.id}`, this.form);
+                        } else {
+                            await axios.post('/api/peminjaman-part', this.form);
+                        }
+                        this.resetForm();
+                        this.ambilDataPeminjaman();
+                    } catch (error) {
+                        console.error('Error mengirim form:', error);
+                        this.error = 'Gagal menyimpan data peminjaman';
+                    } finally {
+                        this.sedangSubmit = false;
+                    }
+                },
+                editPeminjaman(peminjaman) {
+                    this.form = { ...peminjaman };
+                    this.sedangEdit = true;
+                    this.showForm = true;
+                },
+                async kembalikanPart(peminjaman) {
+                    if (confirm('Apakah Anda yakin ingin mengembalikan part ini?')) {
+                        try {
+                            await axios.put(`/api/peminjaman-part/${peminjaman.id}`, {
+                                status: 'DIKEMBALIKAN',
+                                tanggal_kembali_aktual: new Date().toISOString()
+                            });
+                            this.ambilDataPeminjaman();
+                        } catch (error) {
+                            console.error('Error mengembalikan part:', error);
+                            this.error = 'Gagal mengembalikan part';
+                        }
+                    }
+                },
+                lihatDetail(peminjaman) {
+                    this.detailPeminjaman = peminjaman;
+                    this.modalDetail = true;
+                },
+                tutupModal() {
+                    this.modalDetail = false;
+                    this.detailPeminjaman = {};
+                },
+                async startScanner() {
+                    try {
+                        this.statusKamera = 'Meminta izin akses kamera...';
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error('Browser tidak mendukung akses kamera');
+                        }
+                        
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+
+                        this.streamScanner = await navigator.mediaDevices.getUserMedia(constraints);
+                        const videoElement = this.$refs.videoScanner;
+                        if (!videoElement) {
+                            throw new Error('Element video tidak ditemukan');
+                        }
+                        
+                        videoElement.srcObject = this.streamScanner;
+                        videoElement.setAttribute('playsinline', true);
+                        
+                        videoElement.onloadedmetadata = () => {
+                            this.statusKamera = 'Kamera siap digunakan';
+                            videoElement.play();
+                            this.scanQRCode();
+                        };
+                    } catch (error) {
+                        const errorMsg = `Gagal mengakses kamera: ${error.message}. Pastikan kamera tersedia dan izin diberikan.`;
+                        console.error('Error mengakses kamera:', error);
+                        this.statusKamera = 'Error: ' + errorMsg;
+                        this.error = errorMsg;
+                    }
+                },
+                stopScanner() {
+                    if (this.streamScanner) {
+                        this.streamScanner.getTracks().forEach(track => track.stop());
+                        this.streamScanner = null;
+                    }
+                },
+                scanQRCode() {
+                    if (!this.streamScanner) return;
+
+                    const videoElement = this.$refs.videoScanner;
+                    if (!videoElement) return;
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+
+                    const scanInterval = setInterval(() => {
+                        if (!this.streamScanner || this.serialTerdeteksi) {
+                            clearInterval(scanInterval);
+                            return;
+                        }
+
+                        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                            canvas.width = videoElement.videoWidth;
+                            canvas.height = videoElement.videoHeight;
+                            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                            
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                console.log('QR Code terdeteksi:', code.data);
+                                this.form.nomor_seri = code.data;
+                                this.serialTerdeteksi = true;
+                                this.stopScanner();
+                            }
+                        }
+                    }, 100);
+                },
+                scanUlang() {
+                    this.serialTerdeteksi = false;
+                    this.form.nomor_seri = '';
+                    this.startScanner();
+                },
+                resetForm() {
+                    this.form = {
+                        id: null,
+                        id_pelanggan: '',
+                        id_device: '',
+                        nama_part_normal: '',
+                        nama_part_rusak: '',
+                        tanggal_pinjam: '',
+                        perkiraan_tanggal_kembali: '',
+                        catatan: ''
+                    };
+                    this.sedangEdit = false;
+                    this.error = null;
+                    this.showForm = false;
+                    this.stopScanner();
+                    this.serialTerdeteksi = false;
+                }
+            },
+            watch: {
+                metodeInput(newValue) {
+                    if (newValue === 'kamera') {
+                        this.$nextTick(() => {
+                            this.startScanner();
+                        });
+                    } else {
+                        this.stopScanner();
+                        this.serialTerdeteksi = false;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

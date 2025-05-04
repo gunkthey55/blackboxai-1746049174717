@@ -1,0 +1,154 @@
+[Previous content up to line 540, then continuing with:]
+                async hapusDevice(id) {
+                    if (confirm('Apakah Anda yakin ingin menghapus device ini?')) {
+                        console.log('Menghapus device:', id);
+                        this.error = null;
+                        try {
+                            await axios.delete(`/api/device/${id}`);
+                            console.log('Device berhasil dihapus');
+                            this.ambilDataDevice();
+                        } catch (error) {
+                            console.error('Error menghapus device:', error);
+                            this.error = 'Gagal menghapus data. Silakan coba lagi.';
+                        }
+                    }
+                },
+                async cetakTandaTerima(id) {
+                    try {
+                        window.open(`/api/device/${id}/receipt`, '_blank');
+                    } catch (error) {
+                        console.error('Error mencetak tanda terima:', error);
+                        this.error = 'Gagal mencetak tanda terima. Silakan coba lagi.';
+                    }
+                },
+                async startScanner() {
+                    try {
+                        this.statusKamera = 'Meminta izin akses kamera...';
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error('Browser tidak mendukung akses kamera');
+                        }
+                        
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+
+                        this.streamScanner = await navigator.mediaDevices.getUserMedia(constraints);
+                        const videoElement = this.$refs.videoScanner;
+                        if (!videoElement) {
+                            throw new Error('Element video tidak ditemukan');
+                        }
+                        
+                        videoElement.srcObject = this.streamScanner;
+                        videoElement.setAttribute('playsinline', true);
+                        
+                        videoElement.onloadedmetadata = () => {
+                            this.statusKamera = 'Kamera siap digunakan';
+                            videoElement.play();
+                            this.scanQRCode();
+                        };
+                    } catch (error) {
+                        const errorMsg = `Gagal mengakses kamera: ${error.message}. Pastikan kamera tersedia dan izin diberikan.`;
+                        console.error('Error mengakses kamera:', error);
+                        this.statusKamera = 'Error: ' + errorMsg;
+                        this.error = errorMsg;
+                    }
+                },
+                stopScanner() {
+                    if (this.streamScanner) {
+                        this.streamScanner.getTracks().forEach(track => track.stop());
+                        this.streamScanner = null;
+                    }
+                },
+                scanQRCode() {
+                    if (!this.streamScanner) return;
+
+                    const videoElement = this.$refs.videoScanner;
+                    if (!videoElement) return;
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+
+                    const scanInterval = setInterval(() => {
+                        if (!this.streamScanner || this.serialTerdeteksi) {
+                            clearInterval(scanInterval);
+                            return;
+                        }
+
+                        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                            canvas.width = videoElement.videoWidth;
+                            canvas.height = videoElement.videoHeight;
+                            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                            
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                console.log('QR Code terdeteksi:', code.data);
+                                this.form.nomor_seri = code.data;
+                                this.serialTerdeteksi = true;
+                                this.stopScanner();
+                            }
+                        }
+                    }, 100);
+                },
+                scanUlang() {
+                    this.serialTerdeteksi = false;
+                    this.form.nomor_seri = '';
+                    this.startScanner();
+                },
+                resetForm() {
+                    console.log('Reset form');
+                    this.form = {
+                        id: null,
+                        id_pelanggan: '',
+                        nama_device: '',
+                        tipe_device: '',
+                        nomor_seri: '',
+                        tanggal_beli: '',
+                        masa_garansi: '',
+                        id_distributor: '',
+                        catatan: '',
+                        foto_paths: []
+                    };
+                    if (this.$refs.fotoInput) {
+                        this.$refs.fotoInput.value = '';
+                    }
+                    this.fotoKamera = false;
+                    this.stopCamera();
+                    this.stopScanner();
+                    this.serialTerdeteksi = false;
+                    this.sedangEdit = false;
+                    this.error = null;
+                    this.showForm = false;
+                }
+            },
+            watch: {
+                metodeFoto(newValue) {
+                    if (newValue === 'kamera') {
+                        this.$nextTick(() => {
+                            this.startCamera();
+                        });
+                    } else {
+                        this.stopCamera();
+                        this.fotoKamera = false;
+                    }
+                },
+                metodeInput(newValue) {
+                    if (newValue === 'kamera') {
+                        this.$nextTick(() => {
+                            this.startScanner();
+                        });
+                    } else {
+                        this.stopScanner();
+                        this.serialTerdeteksi = false;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
