@@ -2,7 +2,12 @@
 class Sidebar {
     constructor() {
         this.template = `
-            <aside class="w-64 bg-white shadow-md fixed h-screen overflow-y-auto">
+            <div class="lg:hidden fixed top-4 left-4 z-50">
+                <button id="sidebarToggle" class="bg-white p-2 rounded-lg shadow-lg">
+                    <i class="fas fa-bars text-gray-600"></i>
+                </button>
+            </div>
+            <aside class="transform lg:transform-none lg:translate-x-0 transition-transform duration-300 ease-in-out w-64 bg-white shadow-md fixed h-screen overflow-y-auto -translate-x-full">
                 <div class="p-4 border-b">
                     <h2 class="text-xl font-semibold text-gray-800">Panel Admin</h2>
                 </div>
@@ -28,7 +33,7 @@ class Sidebar {
                         <span class="ml-2">Manajemen Garansi</span>
                     </a>
                 </nav>
-                <div class="absolute bottom-0 w-64 p-4 border-t bg-white">
+                <div class="fixed bottom-0 w-64 p-4 border-t bg-white">
                     <div class="flex items-center">
                         <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
                             <i class="fas fa-user"></i>
@@ -49,11 +54,41 @@ class Sidebar {
         
         createApp({
             template: this.template,
+            data() {
+                return {
+                    isOpen: false
+                };
+            },
             mounted() {
                 this.highlightCurrentPage();
+                this.initSidebarToggle();
             },
             methods: {
                 highlightCurrentPage() {
+                    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+                    const currentLink = this.$el.querySelector(`a[href="${currentPage}"]`);
+                    if (currentLink) {
+                        currentLink.classList.remove('hover:bg-blue-50', 'hover:text-blue-600');
+                        currentLink.classList.add('bg-blue-50', 'text-blue-600');
+                    }
+                },
+                initSidebarToggle() {
+                    const toggleBtn = document.getElementById('sidebarToggle');
+                    const sidebar = this.$el.querySelector('aside');
+                    
+                    if (toggleBtn && sidebar) {
+                        toggleBtn.addEventListener('click', () => {
+                            sidebar.classList.toggle('-translate-x-full');
+                        });
+
+                        // Close sidebar when clicking outside
+                        document.addEventListener('click', (e) => {
+                            if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+                                sidebar.classList.add('-translate-x-full');
+                            }
+                        });
+                    }
+                }
                     const currentPage = window.location.pathname.split('/').pop() || 'index.html';
                     const currentLink = this.$el.querySelector(`a[href="${currentPage}"]`);
                     if (currentLink) {
@@ -71,6 +106,23 @@ class Sidebar {
         if (sidebarElement) {
             sidebarElement.innerHTML = this.template;
             this.highlightCurrentPage(sidebarElement);
+            
+            // Initialize mobile toggle
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const sidebar = sidebarElement.querySelector('aside');
+            
+            if (toggleBtn && sidebar) {
+                toggleBtn.addEventListener('click', () => {
+                    sidebar.classList.toggle('-translate-x-full');
+                });
+
+                // Close sidebar when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+                        sidebar.classList.add('-translate-x-full');
+                    }
+                });
+            }
         }
     }
 

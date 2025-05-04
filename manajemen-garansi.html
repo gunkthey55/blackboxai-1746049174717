@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <title>Manajemen Garansi</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -18,7 +18,7 @@
         <div id="sidebar"></div>
 
         <!-- Main Content -->
-        <div class="flex-1 p-6 ml-64">
+        <div class="flex-1 p-6 sm:ml-64">
             <h1 class="text-2xl font-semibold mb-6">Manajemen Garansi</h1>
 
             <!-- Error Alert -->
@@ -75,11 +75,15 @@
                                         <i class="fas fa-circle-notch fa-spin text-blue-600"></i>
                                         <p class="text-sm">Status Kamera: {{ statusKamera }}</p>
                                     </div>
-                                    <video 
-                                        ref="videoScanner" 
-                                        class="w-full max-w-2xl mx-auto border-2 rounded-lg bg-black shadow-lg" 
-                                        autoplay 
-                                        playsinline>
+                            <video 
+                                ref="videoScanner" 
+                                class="w-full max-w-2xl mx-auto border-2 rounded-lg bg-black shadow-lg" 
+                                autoplay 
+                                playsinline
+                                webkit-playsinline="true"
+                                x5-video-player-type="h5"
+                                x5-video-player-fullscreen="true"
+                                x5-video-orientation="portraint">
                                     </video>
                                     <div class="text-center text-sm text-gray-600">
                                         <p>Arahkan kamera ke barcode/QR code serial number</p>
@@ -269,7 +273,8 @@
                 <div v-if="sedangMuat" class="text-center py-4">
                     <p class="text-gray-500">Memuat data...</p>
                 </div>
-                <table v-else class="w-full table-auto border-collapse border border-gray-300">
+                <div v-else class="w-full overflow-x-auto">
+                    <table class="w-full table-auto border-collapse border border-gray-300 min-w-[800px]">
                     <thead>
                         <tr class="bg-gray-100">
                             <th class="border border-gray-300 px-4 py-2 text-left">Device</th>
