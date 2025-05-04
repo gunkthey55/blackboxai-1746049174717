@@ -1,4 +1,7 @@
-module.exports = {
-    mongoURI: "mongodb+srv://admin:admin123@cluster0.8jrqz.mongodb.net/sistem_manajemen_part?retryWrites=true&w=majority",
-    dbName: "sistem_manajemen_part"
+const config = {
+    mongoURI: process.env.MONGODB_URI || "mongodb+srv://verceladmin:Denpasar123@cluster0.yl3phed.mongodb.net/sistem_manajemen_part?retryWrites=true&w=majority&appName=Cluster0",
+    dbName: "sistem_manajemen_part",
+    port: process.env.PORT || 3001
 };
+
+module.exports = config;

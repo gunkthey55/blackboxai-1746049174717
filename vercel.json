@@ -8,6 +8,18 @@
     {
       "src": "*.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "components/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "shared/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "server/uploads/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -16,8 +28,32 @@
       "dest": "server/index-mongodb.js"
     },
     {
+      "src": "/uploads/(.*)",
+      "dest": "/server/uploads/$1"
+    },
+    {
+      "src": "/components/(.*)",
+      "dest": "/components/$1"
+    },
+    {
+      "src": "/shared/(.*)",
+      "dest": "/shared/$1"
+    },
+    {
+      "src": "/(.*)\\.js",
+      "dest": "/$1.js"
+    },
+    {
+      "src": "/(.*)\\.html",
+      "dest": "/$1.html"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "/index.html"
     }
   ]
 }

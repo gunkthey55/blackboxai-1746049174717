@@ -5,30 +5,32 @@ const multer = require('multer');
 const path = require('path');
 const PDFDocument = require('pdfkit');
 const { MongoClient, ObjectId } = require('mongodb');
-const config = require('./config-atlas');
+const config = require('./config');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = config.port;
 
 // MongoDB Connection
 let db;
 
 async function connectToMongo() {
     try {
+        console.log('Attempting to connect to MongoDB...');
         const client = new MongoClient(config.mongoURI);
         await client.connect();
         console.log('Connected to MongoDB Atlas');
         db = client.db(config.dbName);
+        return client;
     } catch (error) {
         console.error('MongoDB connection error:', error);
-        process.exit(1);
+        throw error;
     }
 }
 
 // Configure storage for multer
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, './uploads/');
+        cb(null, path.join(__dirname, 'uploads'));
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + '-' + file.originalname);
@@ -50,10 +52,21 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Middleware to log all requests
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    next();
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({ 
+        error: 'Internal Server Error',
+        message: err.message 
+    });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'healthy',
+        mongodb: db ? 'connected' : 'disconnected'
+    });
 });
 
 // API Routes
@@ -194,12 +207,35 @@ app.get('/api/peminjaman-part', async (req, res) => {
     }
 });
 
+// Serve static files
+app.use(express.static(path.join(__dirname, '..')));
+
+// Catch-all route for SPA
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
 // Start server
 async function startServer() {
-    await connectToMongo();
-    app.listen(PORT, () => {
-        console.log(`Server berjalan di http://localhost:${PORT}`);
-    });
+    try {
+        const client = await connectToMongo();
+        console.log('MongoDB connected successfully');
+
+        app.listen(PORT, () => {
+            console.log(`Server berjalan di http://localhost:${PORT}`);
+        });
+
+        // Handle graceful shutdown
+        process.on('SIGTERM', async () => {
+            console.log('SIGTERM received. Shutting down gracefully...');
+            await client.close();
+            process.exit(0);
+        });
+
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
 }
 
 startServer().catch(console.error);
