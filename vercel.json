@@ -3,17 +3,33 @@
   "public": true,
   "builds": [
     {
-      "src": "public/**",
+      "src": "public/**/*",
       "use": "@vercel/static"
+    },
+    {
+      "src": "server/index-mongodb.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "/public/$1"
+      "src": "/api/(.*)",
+      "dest": "server/index-mongodb.js"
     },
     {
-      "src": "/",
+      "src": "/uploads/(.*)",
+      "dest": "server/index-mongodb.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1",
+      "continue": true
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
       "dest": "/public/index.html"
     }
   ]
