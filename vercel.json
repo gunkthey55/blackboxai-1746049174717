@@ -16,20 +16,12 @@
     {
       "src": "shared/**",
       "use": "@vercel/static"
-    },
-    {
-      "src": "server/uploads/**",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
       "dest": "server/index-mongodb.js"
-    },
-    {
-      "src": "/uploads/(.*)",
-      "dest": "/server/uploads/$1"
     },
     {
       "src": "/components/(.*)",
@@ -40,20 +32,14 @@
       "dest": "/shared/$1"
     },
     {
-      "src": "/(.*)\\.js",
-      "dest": "/$1.js"
-    },
-    {
-      "src": "/(.*)\\.html",
-      "dest": "/$1.html"
-    },
-    {
-      "src": "/",
-      "dest": "/index.html"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
