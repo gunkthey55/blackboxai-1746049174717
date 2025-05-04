@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "server/index-mongodb.js",
+      "src": "server/index-static.js",
       "use": "@vercel/node"
     },
     {
@@ -21,25 +21,14 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "server/index-mongodb.js"
-    },
-    {
-      "src": "/components/(.*)",
-      "dest": "/components/$1"
-    },
-    {
-      "src": "/shared/(.*)",
-      "dest": "/shared/$1"
+      "dest": "server/index-static.js"
     },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "server/index-static.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
