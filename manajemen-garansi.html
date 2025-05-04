@@ -9,44 +9,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script src="shared/sidebar-new.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div id="app" class="min-h-screen flex">
         <!-- Sidebar -->
-        <aside class="w-64 bg-white shadow-md fixed h-screen overflow-y-auto">
-            <div class="p-4 border-b">
-                <h2 class="text-xl font-semibold text-gray-800">Panel Admin</h2>
-            </div>
-            <nav class="mt-4">
-                <a href="manajemen-pelanggan.html" class="block p-3 flex items-center cursor-pointer transition-colors duration-200 hover:bg-blue-50 hover:text-blue-600">
-                    <i class="fas fa-users w-6"></i>
-                    <span class="ml-2">Manajemen Pelanggan</span>
-                </a>
-                <a href="manajemen-device.html" class="block p-3 flex items-center cursor-pointer transition-colors duration-200 hover:bg-blue-50 hover:text-blue-600">
-                    <i class="fas fa-laptop w-6"></i>
-                    <span class="ml-2">Manajemen Device</span>
-                </a>
-                <a href="manajemen-peminjaman.html" class="block p-3 flex items-center cursor-pointer transition-colors duration-200 hover:bg-blue-50 hover:text-blue-600">
-                    <i class="fas fa-exchange-alt w-6"></i>
-                    <span class="ml-2">Peminjaman Part</span>
-                </a>
-                <div class="p-3 flex items-center cursor-pointer transition-colors duration-200 bg-blue-50 text-blue-600">
-                    <i class="fas fa-shield-alt w-6"></i>
-                    <span class="ml-2">Manajemen Garansi</span>
-                </div>
-            </nav>
-            <div class="absolute bottom-0 w-64 p-4 border-t bg-white">
-                <div class="flex items-center">
-                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-medium text-gray-700">Admin</p>
-                        <p class="text-xs text-gray-500">admin@admin.com</p>
-                    </div>
-                </div>
-            </div>
-        </aside>
+        <div id="sidebar"></div>
 
         <!-- Main Content -->
         <div class="flex-1 p-6 ml-64">
@@ -77,6 +46,70 @@
                             </option>
                         </select>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
+                        <div class="space-y-4">
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <button type="button" @click="metodeInput = 'kamera'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center', 
+                                    metodeInput === 'kamera' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-camera text-xl mr-3"></i>
+                                    Scan dengan Kamera
+                                </button>
+                                <button type="button" @click="metodeInput = 'manual'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center',
+                                    metodeInput === 'manual' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-keyboard text-xl mr-3"></i>
+                                    Input Manual
+                                </button>
+                            </div>
+
+                            <!-- Kamera Scanner -->
+                            <div v-if="metodeInput === 'kamera'" class="space-y-4 bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+                                <div v-if="!serialTerdeteksi" class="space-y-4">
+                                    <div class="flex items-center space-x-2 text-gray-700">
+                                        <i class="fas fa-circle-notch fa-spin text-blue-600"></i>
+                                        <p class="text-sm">Status Kamera: {{ statusKamera }}</p>
+                                    </div>
+                                    <video 
+                                        ref="videoScanner" 
+                                        class="w-full max-w-2xl mx-auto border-2 rounded-lg bg-black shadow-lg" 
+                                        autoplay 
+                                        playsinline>
+                                    </video>
+                                    <div class="text-center text-sm text-gray-600">
+                                        <p>Arahkan kamera ke barcode/QR code serial number</p>
+                                    </div>
+                                </div>
+                                <div v-if="serialTerdeteksi" class="space-y-4">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                                        <p class="text-green-600 font-medium">Serial Number Terdeteksi!</p>
+                                    </div>
+                                    <div class="p-4 bg-white rounded-lg border border-gray-200">
+                                        <p class="text-lg font-medium">{{ form.nomor_seri }}</p>
+                                    </div>
+                                    <div class="flex justify-center">
+                                        <button type="button" @click="scanUlang"
+                                            class="bg-gray-600 text-white px-8 py-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center text-lg font-medium shadow-lg">
+                                            <i class="fas fa-redo text-xl mr-3"></i>Scan Ulang
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Manual Input -->
+                            <div v-if="metodeInput === 'manual'">
+                                <input type="text" v-model="form.nomor_seri" placeholder="Masukkan Serial Number"
+                                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1" for="device">Device</label>
                         <select id="device" v-model="form.id_device" required
@@ -121,6 +154,89 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1" for="tanggal_terima">Tanggal Terima dari Distributor</label>
                         <input type="datetime-local" id="tanggal_terima" v-model="form.tanggal_terima_kembali"
                             class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div v-if="sedangEdit && (form.status === 'DITERIMA' || form.status === 'SELESAI')" class="border-t pt-4 mt-4">
+                        <label class="block text-lg font-medium text-gray-700 mb-3">Foto Tanda Terima dari Distributor</label>
+                        <div class="space-y-4">
+                            <p class="text-sm text-gray-500 mb-2">Pilih metode pengambilan foto:</p>
+                            <!-- Pilihan Metode Upload -->
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <button type="button" @click="metodeFoto = 'kamera'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center', 
+                                    metodeFoto === 'kamera' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-camera text-xl mr-3"></i>
+                                    Ambil dari Kamera
+                                </button>
+                                <button type="button" @click="metodeFoto = 'file'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center',
+                                    metodeFoto === 'file' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-file-upload text-xl mr-3"></i>
+                                    Upload dari File
+                                </button>
+                            </div>
+
+                            <!-- Kamera -->
+                            <div v-if="metodeFoto === 'kamera'" class="space-y-4 bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+                                <div v-if="!fotoKamera" class="space-y-4">
+                                    <div class="flex items-center space-x-2 text-gray-700">
+                                        <i class="fas fa-circle-notch fa-spin text-blue-600"></i>
+                                        <p class="text-sm">Status Kamera: {{ statusKamera }}</p>
+                                    </div>
+                                    <video 
+                                        ref="video" 
+                                        class="w-full max-w-2xl mx-auto border-2 rounded-lg bg-black shadow-lg" 
+                                        autoplay 
+                                        playsinline 
+                                        webkit-playsinline="true"
+                                        x5-video-player-type="h5"
+                                        x5-video-player-fullscreen="true"
+                                        x5-video-orientation="portraint">
+                                    </video>
+                                    <div class="flex justify-center">
+                                        <button type="button" @click="ambilFoto"
+                                            class="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center text-lg font-medium shadow-lg">
+                                            <i class="fas fa-camera text-xl mr-3"></i>Ambil Foto
+                                        </button>
+                                    </div>
+                                </div>
+                                <div v-if="fotoKamera" class="space-y-4">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                                        <p class="text-green-600 font-medium">Foto berhasil diambil!</p>
+                                    </div>
+                                    <canvas ref="canvas" class="w-full max-w-2xl mx-auto border-2 rounded-lg bg-white shadow-lg"></canvas>
+                                    <div class="flex justify-center">
+                                        <button type="button" @click="ambilFotoUlang"
+                                            class="bg-gray-600 text-white px-8 py-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center text-lg font-medium shadow-lg">
+                                            <i class="fas fa-redo text-xl mr-3"></i>Ambil Ulang
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- File Upload -->
+                            <div v-if="metodeFoto === 'file'">
+                                <input type="file" id="foto_tanda_terima" ref="fotoInput" @change="handleFotoUpload" accept="image/*" multiple
+                                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <p class="mt-2 text-sm text-gray-500">Anda dapat memilih beberapa foto sekaligus (maksimal 5 foto)</p>
+                            </div>
+
+                            <!-- Preview Foto -->
+                            <div v-if="form.foto_paths && form.foto_paths.length > 0 && !fotoKamera" class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+                                <div v-for="(foto, index) in form.foto_paths" :key="index" class="relative">
+                                    <img :src="foto" 
+                                        class="w-full h-32 object-cover rounded shadow-sm" :alt="'Foto tanda terima ' + (index + 1)" />
+                                    <button type="button" @click="hapusFoto(index)" 
+                                        class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div v-if="sedangEdit && form.status === 'SELESAI'">
                         <label class="block text-sm font-medium text-gray-700 mb-1" for="resolusi">Resolusi</label>
@@ -231,6 +347,10 @@
                                 <p class="text-sm text-gray-600">Tanggal Terima dari Distributor</p>
                                 <p class="font-medium">{{ formatTanggal(detailKlaim.tanggal_terima_kembali) }}</p>
                             </div>
+                            <div v-if="detailKlaim.foto_tanda_terima">
+                                <p class="text-sm text-gray-600">Foto Tanda Terima</p>
+                                <img :src="detailKlaim.foto_tanda_terima" alt="Tanda Terima" class="mt-2 max-w-xs rounded shadow" />
+                            </div>
                         </div>
                         <div>
                             <p class="text-sm text-gray-600">Deskripsi Masalah</p>
@@ -271,12 +391,15 @@
                         id_pelanggan: '',
                         id_device: '',
                         id_distributor: '',
+                        nomor_seri: '',
                         deskripsi_masalah: '',
                         status: 'PENDING',
                         tanggal_kirim_distributor: '',
                         tanggal_terima_kembali: '',
                         resolusi: '',
-                        catatan: ''
+                        catatan: '',
+                        foto_tanda_terima: null,
+                        foto_tanda_terima_url: null
                     },
                     sedangEdit: false,
                     sedangMuat: false,
@@ -284,7 +407,15 @@
                     error: null,
                     modalDetail: false,
                     detailKlaim: {},
-                    showForm: false
+                    showForm: false,
+                    metodeFoto: 'file',
+                    metodeInput: 'manual',
+                    fotoKamera: null,
+                    stream: null,
+                    streamScanner: null,
+                    statusKamera: 'Memulai...',
+                    fotoToDelete: [],
+                    serialTerdeteksi: false
                 };
             },
             mounted() {
@@ -305,7 +436,7 @@
                 },
                 async ambilDataPelanggan() {
                     try {
-                        const response = await axios.get('http://localhost:3001/api/pelanggan');
+                        const response = await axios.get('/api/pelanggan');
                         this.daftarPelanggan = response.data;
                     } catch (error) {
                         console.error('Error mengambil data pelanggan:', error);
@@ -314,7 +445,7 @@
                 },
                 async ambilDataDevice() {
                     try {
-                        const response = await axios.get('http://localhost:3001/api/device');
+                        const response = await axios.get('/api/device');
                         this.daftarDevice = response.data;
                     } catch (error) {
                         console.error('Error mengambil data device:', error);
@@ -323,7 +454,7 @@
                 },
                 async ambilDataDistributor() {
                     try {
-                        const response = await axios.get('http://localhost:3001/api/distributor');
+                        const response = await axios.get('/api/distributor');
                         this.daftarDistributor = response.data;
                     } catch (error) {
                         console.error('Error mengambil data distributor:', error);
@@ -334,7 +465,7 @@
                     this.sedangMuat = true;
                     this.error = null;
                     try {
-                        const response = await axios.get('http://localhost:3001/api/klaim-garansi');
+                        const response = await axios.get('/api/klaim-garansi');
                         this.daftarKlaim = response.data;
                     } catch (error) {
                         console.error('Error mengambil data klaim:', error);
@@ -343,14 +474,153 @@
                         this.sedangMuat = false;
                     }
                 },
+                async startCamera() {
+                    try {
+                        this.statusKamera = 'Meminta izin akses kamera...';
+                        console.log('Memulai akses kamera...');
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error('Browser tidak mendukung akses kamera');
+                        }
+                        
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+
+                        if (this.$refs.video) {
+                            this.$refs.video.setAttribute('playsinline', 'true');
+                        }
+
+                        this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                        
+                        this.statusKamera = 'Kamera berhasil diakses, mengatur video stream...';
+                        console.log('Kamera berhasil diakses, mengatur video stream...');
+                        const videoElement = this.$refs.video;
+                        if (!videoElement) {
+                            throw new Error('Element video tidak ditemukan');
+                        }
+                        
+                        videoElement.srcObject = this.stream;
+                        videoElement.onloadedmetadata = () => {
+                            this.statusKamera = 'Kamera siap digunakan';
+                            console.log('Video stream siap');
+                            videoElement.play();
+                        };
+                    } catch (error) {
+                        const errorMsg = `Gagal mengakses kamera: ${error.message}. Pastikan kamera tersedia dan izin diberikan.`;
+                        console.error('Error mengakses kamera:', error);
+                        this.statusKamera = 'Error: ' + errorMsg;
+                        this.error = errorMsg;
+                    }
+                },
+                stopCamera() {
+                    if (this.stream) {
+                        this.stream.getTracks().forEach(track => track.stop());
+                        this.stream = null;
+                    }
+                },
+                ambilFoto() {
+                    try {
+                        console.log('Mengambil foto...');
+                        const video = this.$refs.video;
+                        const canvas = this.$refs.canvas;
+                        
+                        if (!video || !canvas) {
+                            throw new Error('Element video atau canvas tidak ditemukan');
+                        }
+                        
+                        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                            throw new Error('Video stream belum siap');
+                        }
+                        
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        const context = canvas.getContext('2d');
+                        context.drawImage(video, 0, 0);
+                        
+                        this.form.foto_tanda_terima_url = canvas.toDataURL('image/jpeg');
+                        console.log('Foto berhasil diambil');
+                        
+                        this.fotoKamera = true;
+                        this.stopCamera();
+
+                        // Convert canvas to blob and store as file
+                        canvas.toBlob(blob => {
+                            this.form.foto_tanda_terima = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+                        }, 'image/jpeg');
+                    } catch (error) {
+                        console.error('Error mengambil foto:', error);
+                        this.error = `Gagal mengambil foto: ${error.message}`;
+                    }
+                },
+                ambilFotoUlang() {
+                    this.fotoKamera = false;
+                    this.startCamera();
+                },
+                hapusFoto(index) {
+                    const foto = this.form.foto_paths[index];
+                    if (foto.startsWith('/uploads/')) {
+                        this.fotoToDelete.push(foto);
+                    }
+                    this.form.foto_paths.splice(index, 1);
+                },
+                async handleFotoUpload(event) {
+                    const files = Array.from(event.target.files);
+                    if (files.length > 0) {
+                        try {
+                            for (const file of files) {
+                                const formData = new FormData();
+                                formData.append('foto', file);
+                                
+                                const response = await axios.post('/api/upload', formData, {
+                                    headers: {
+                                        'Content-Type': 'multipart/form-data'
+                                    }
+                                });
+                                
+                                if (!this.form.foto_paths) {
+                                    this.form.foto_paths = [];
+                                }
+                                this.form.foto_paths.push(response.data.path);
+                            }
+                        } catch (error) {
+                            console.error('Error uploading foto:', error);
+                            this.error = 'Gagal mengunggah foto. Silakan coba lagi.';
+                        }
+                    }
+                },
                 async kirimForm() {
                     this.sedangSubmit = true;
                     this.error = null;
                     try {
+                        const formData = new FormData();
+                        for (const key in this.form) {
+                            if (key === 'foto_paths' && this.form[key]) {
+                                formData.append('foto_paths', JSON.stringify(this.form[key]));
+                            } else if (this.form[key] !== null) {
+                                formData.append(key, this.form[key]);
+                            }
+                        }
+
+                        if (this.fotoToDelete.length > 0) {
+                            formData.append('hapus_foto', JSON.stringify(this.fotoToDelete));
+                        }
+
                         if (this.sedangEdit) {
-                            await axios.put(`http://localhost:3001/api/klaim-garansi/${this.form.id}`, this.form);
+                            await axios.put(`/api/klaim-garansi/${this.form.id}`, formData, {
+                                headers: {
+                                    'Content-Type': 'multipart/form-data'
+                                }
+                            });
                         } else {
-                            await axios.post('http://localhost:3001/api/klaim-garansi', this.form);
+                            await axios.post('/api/klaim-garansi', formData, {
+                                headers: {
+                                    'Content-Type': 'multipart/form-data'
+                                }
+                            });
                         }
                         this.resetForm();
                         this.ambilDataKlaim();
@@ -385,13 +655,122 @@
                         tanggal_kirim_distributor: '',
                         tanggal_terima_kembali: '',
                         resolusi: '',
-                        catatan: ''
+                        catatan: '',
+                        foto_paths: [],
+                        foto_tanda_terima: null,
+                        foto_tanda_terima_url: null
                     };
                     this.sedangEdit = false;
                     this.error = null;
                     this.showForm = false;
+                    this.fotoKamera = false;
+                    this.fotoToDelete = [];
+                    if (this.$refs.fotoInput) {
+                        this.$refs.fotoInput.value = '';
+                    }
+                },
+                async startScanner() {
+                    try {
+                        this.statusKamera = 'Meminta izin akses kamera...';
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error('Browser tidak mendukung akses kamera');
+                        }
+                        
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+
+                        this.streamScanner = await navigator.mediaDevices.getUserMedia(constraints);
+                        const videoElement = this.$refs.videoScanner;
+                        if (!videoElement) {
+                            throw new Error('Element video tidak ditemukan');
+                        }
+                        
+                        videoElement.srcObject = this.streamScanner;
+                        videoElement.setAttribute('playsinline', true);
+                        
+                        videoElement.onloadedmetadata = () => {
+                            this.statusKamera = 'Kamera siap digunakan';
+                            videoElement.play();
+                            this.scanQRCode();
+                        };
+                    } catch (error) {
+                        const errorMsg = `Gagal mengakses kamera: ${error.message}. Pastikan kamera tersedia dan izin diberikan.`;
+                        console.error('Error mengakses kamera:', error);
+                        this.statusKamera = 'Error: ' + errorMsg;
+                        this.error = errorMsg;
+                    }
+                },
+                stopScanner() {
+                    if (this.streamScanner) {
+                        this.streamScanner.getTracks().forEach(track => track.stop());
+                        this.streamScanner = null;
+                    }
+                },
+                scanQRCode() {
+                    if (!this.streamScanner) return;
+
+                    const videoElement = this.$refs.videoScanner;
+                    if (!videoElement) return;
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+
+                    const scanInterval = setInterval(() => {
+                        if (!this.streamScanner || this.serialTerdeteksi) {
+                            clearInterval(scanInterval);
+                            return;
+                        }
+
+                        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                            canvas.width = videoElement.videoWidth;
+                            canvas.height = videoElement.videoHeight;
+                            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                            
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                console.log('QR Code terdeteksi:', code.data);
+                                this.form.nomor_seri = code.data;
+                                this.serialTerdeteksi = true;
+                                this.stopScanner();
+                            }
+                        }
+                    }, 100);
+                },
+                scanUlang() {
+                    this.serialTerdeteksi = false;
+                    this.form.nomor_seri = '';
+                    this.startScanner();
                 }
-            }
+            },
+            watch: {
+                metodeFoto(newValue) {
+                    if (newValue === 'kamera') {
+                        this.$nextTick(() => {
+                            this.startCamera();
+                        });
+                    } else {
+                        this.stopCamera();
+                        this.fotoKamera = false;
+                    }
+                },
+                metodeInput(newValue) {
+                    if (newValue === 'kamera') {
+                        this.$nextTick(() => {
+                            this.startScanner();
+                        });
+                    } else {
+                        this.stopScanner();
+                        this.serialTerdeteksi = false;
+                    }
+                }
+            },
         }).mount('#app');
     </script>
 </body>

@@ -13,7 +13,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <script src="shared/sidebar-unified.js"></script>
+    <script src="shared/sidebar-new.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div id="app" class="min-h-screen flex">
@@ -60,9 +61,67 @@
                             class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1" for="nomor_seri">Nomor Seri</label>
-                        <input type="text" id="nomor_seri" v-model="form.nomor_seri"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
+                        <div class="space-y-4">
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <button type="button" @click="metodeInput = 'kamera'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center', 
+                                    metodeInput === 'kamera' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-camera text-xl mr-3"></i>
+                                    Scan dengan Kamera
+                                </button>
+                                <button type="button" @click="metodeInput = 'manual'"
+                                    :class="['flex-1 px-6 py-3 rounded-lg text-lg font-medium transition flex items-center justify-center',
+                                    metodeInput === 'manual' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200']">
+                                    <i class="fas fa-keyboard text-xl mr-3"></i>
+                                    Input Manual
+                                </button>
+                            </div>
+
+                            <!-- Kamera Scanner -->
+                            <div v-if="metodeInput === 'kamera'" class="space-y-4 bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
+                                <div v-if="!serialTerdeteksi" class="space-y-4">
+                                    <div class="flex items-center space-x-2 text-gray-700">
+                                        <i class="fas fa-circle-notch fa-spin text-blue-600"></i>
+                                        <p class="text-sm">Status Kamera: {{ statusKamera }}</p>
+                                    </div>
+                                    <video 
+                                        ref="videoScanner" 
+                                        class="w-full max-w-2xl mx-auto border-2 rounded-lg bg-black shadow-lg" 
+                                        autoplay 
+                                        playsinline>
+                                    </video>
+                                    <div class="text-center text-sm text-gray-600">
+                                        <p>Arahkan kamera ke barcode/QR code serial number</p>
+                                    </div>
+                                </div>
+                                <div v-if="serialTerdeteksi" class="space-y-4">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                                        <p class="text-green-600 font-medium">Serial Number Terdeteksi!</p>
+                                    </div>
+                                    <div class="p-4 bg-white rounded-lg border border-gray-200">
+                                        <p class="text-lg font-medium">{{ form.nomor_seri }}</p>
+                                    </div>
+                                    <div class="flex justify-center">
+                                        <button type="button" @click="scanUlang"
+                                            class="bg-gray-600 text-white px-8 py-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center text-lg font-medium shadow-lg">
+                                            <i class="fas fa-redo text-xl mr-3"></i>Scan Ulang
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Manual Input -->
+                            <div v-if="metodeInput === 'manual'">
+                                <input type="text" v-model="form.nomor_seri" placeholder="Masukkan Serial Number"
+                                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1" for="tanggal_beli">Tanggal Pembelian</label>
@@ -73,16 +132,6 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1" for="masa_garansi">Masa Garansi (bulan)</label>
                         <input type="number" id="masa_garansi" v-model="form.masa_garansi" min="0"
                             class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1" for="distributor">Distributor</label>
-                        <select id="distributor" v-model="form.id_distributor"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">Pilih Distributor</option>
-                            <option v-for="d in daftarDistributor" :key="d.id" :value="d.id">
-                                {{ d.nama }}
-                            </option>
-                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1" for="catatan">Catatan</label>
@@ -162,7 +211,7 @@
                             <!-- Preview Foto -->
                             <div v-if="form.foto_paths && form.foto_paths.length > 0 && !fotoKamera" class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
                                 <div v-for="(foto, index) in form.foto_paths" :key="index" class="relative">
-                                    <img :src="'http://localhost:3001' + foto" 
+                                    <img :src="foto" 
                                         class="w-full h-32 object-cover rounded shadow-sm" :alt="'Foto device ' + (index + 1)" />
                                     <button type="button" @click="hapusFoto(index)" 
                                         class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
@@ -209,8 +258,8 @@
                             <td class="border border-gray-300 px-4 py-2">
                                 <div class="flex items-center">
                                     <div v-if="device.foto_paths && device.foto_paths.length > 0" class="flex -space-x-2 mr-2">
-                                        <img v-for="(foto, index) in device.foto_paths.slice(0, 3)" :key="index"
-                                            :src="'http://localhost:3001' + foto" 
+                                    <img v-for="(foto, index) in device.foto_paths.slice(0, 3)" :key="index"
+                                            :src="foto" 
                                             class="w-10 h-10 object-cover rounded-full border-2 border-white"
                                             :alt="device.nama_device + ' foto ' + (index + 1)" />
                                         <div v-if="device.foto_paths.length > 3"
@@ -252,7 +301,6 @@
                 return {
                     daftarDevice: [],
                     daftarPelanggan: [],
-                    daftarDistributor: [],
                     form: {
                         id: null,
                         id_pelanggan: '',
@@ -271,33 +319,26 @@
                     error: null,
                     showForm: false,
                     metodeFoto: 'file', // 'file' atau 'kamera'
+                    metodeInput: 'manual', // 'manual' atau 'kamera'
                     fotoKamera: null,
                     stream: null,
+                    streamScanner: null,
                     statusKamera: 'Memulai...',
-                    fotoToDelete: [] // Array untuk menyimpan foto yang akan dihapus
+                    fotoToDelete: [], // Array untuk menyimpan foto yang akan dihapus
+                    serialTerdeteksi: false
                 };
             },
             mounted() {
                 this.ambilDataDevice();
                 this.ambilDataPelanggan();
-                this.ambilDataDistributor();
             },
             methods: {
-                async ambilDataDistributor() {
-                    try {
-                        const response = await axios.get('http://localhost:3001/api/distributor');
-                        this.daftarDistributor = response.data;
-                    } catch (error) {
-                        console.error('Error mengambil data distributor:', error);
-                        this.error = 'Gagal memuat data distributor';
-                    }
-                },
                 async ambilDataDevice() {
                     console.log('Mengambil data device...');
                     this.sedangMuat = true;
                     this.error = null;
                     try {
-                        const response = await axios.get('http://localhost:3001/api/device');
+                        const response = await axios.get('/api/device');
                         console.log('Data device diterima:', response.data);
                         this.daftarDevice = response.data;
                     } catch (error) {
@@ -309,7 +350,7 @@
                 },
                 async ambilDataPelanggan() {
                     try {
-                        const response = await axios.get('http://localhost:3001/api/pelanggan');
+                        const response = await axios.get('/api/pelanggan');
                         this.daftarPelanggan = response.data;
                     } catch (error) {
                         console.error('Error mengambil data pelanggan:', error);
@@ -442,14 +483,14 @@
 
                         if (this.sedangEdit) {
                             console.log('Mengupdate device:', this.form.id);
-                            await axios.put(`http://localhost:3001/api/device/${this.form.id}`, formData, {
+                            await axios.put(`/api/device/${this.form.id}`, formData, {
                                 headers: {
                                     'Content-Type': 'multipart/form-data'
                                 }
                             });
                         } else {
                             console.log('Menambah device baru');
-                            await axios.post('http://localhost:3001/api/device', formData, {
+                            await axios.post('/api/device', formData, {
                                 headers: {
                                     'Content-Type': 'multipart/form-data'
                                 }
@@ -490,9 +531,9 @@
 
                 hapusFoto(index) {
                     const foto = this.form.foto_paths[index];
-                    if (foto.startsWith('http://localhost:3001/uploads/')) {
+                    if (foto.startsWith('/uploads/')) {
                         // Jika foto dari server, tambahkan ke array fotoToDelete
-                        this.fotoToDelete.push(foto.replace('http://localhost:3001', ''));
+                        this.fotoToDelete.push(foto);
                     }
                     this.form.foto_paths.splice(index, 1);
                 },
@@ -501,7 +542,7 @@
                         console.log('Menghapus device:', id);
                         this.error = null;
                         try {
-                            await axios.delete(`http://localhost:3001/api/device/${id}`);
+                            await axios.delete(`/api/device/${id}`);
                             console.log('Device berhasil dihapus');
                             this.ambilDataDevice();
                         } catch (error) {
@@ -513,11 +554,90 @@
                 async cetakTandaTerima(id) {
                     try {
                         // Open receipt in new window
-                        window.open(`http://localhost:3001/api/device/${id}/receipt`, '_blank');
+                        window.open(`/api/device/${id}/receipt`, '_blank');
                     } catch (error) {
                         console.error('Error mencetak tanda terima:', error);
                         this.error = 'Gagal mencetak tanda terima. Silakan coba lagi.';
                     }
+                },
+                async startScanner() {
+                    try {
+                        this.statusKamera = 'Meminta izin akses kamera...';
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error('Browser tidak mendukung akses kamera');
+                        }
+                        
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+
+                        this.streamScanner = await navigator.mediaDevices.getUserMedia(constraints);
+                        const videoElement = this.$refs.videoScanner;
+                        if (!videoElement) {
+                            throw new Error('Element video tidak ditemukan');
+                        }
+                        
+                        videoElement.srcObject = this.streamScanner;
+                        videoElement.setAttribute('playsinline', true);
+                        
+                        videoElement.onloadedmetadata = () => {
+                            this.statusKamera = 'Kamera siap digunakan';
+                            videoElement.play();
+                            this.scanQRCode();
+                        };
+                    } catch (error) {
+                        const errorMsg = `Gagal mengakses kamera: ${error.message}. Pastikan kamera tersedia dan izin diberikan.`;
+                        console.error('Error mengakses kamera:', error);
+                        this.statusKamera = 'Error: ' + errorMsg;
+                        this.error = errorMsg;
+                    }
+                },
+                stopScanner() {
+                    if (this.streamScanner) {
+                        this.streamScanner.getTracks().forEach(track => track.stop());
+                        this.streamScanner = null;
+                    }
+                },
+                scanQRCode() {
+                    if (!this.streamScanner) return;
+
+                    const videoElement = this.$refs.videoScanner;
+                    if (!videoElement) return;
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+
+                    const scanInterval = setInterval(() => {
+                        if (!this.streamScanner || this.serialTerdeteksi) {
+                            clearInterval(scanInterval);
+                            return;
+                        }
+
+                        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                            canvas.width = videoElement.videoWidth;
+                            canvas.height = videoElement.videoHeight;
+                            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                            
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                console.log('QR Code terdeteksi:', code.data);
+                                this.form.nomor_seri = code.data;
+                                this.serialTerdeteksi = true;
+                                this.stopScanner();
+                            }
+                        }
+                    }, 100);
+                },
+                scanUlang() {
+                    this.serialTerdeteksi = false;
+                    this.form.nomor_seri = '';
+                    this.startScanner();
                 },
                 resetForm() {
                     console.log('Reset form');
@@ -538,6 +658,8 @@
                     }
                     this.fotoKamera = false;
                     this.stopCamera();
+                    this.stopScanner();
+                    this.serialTerdeteksi = false;
                     this.sedangEdit = false;
                     this.error = null;
                     this.showForm = false;
@@ -552,6 +674,16 @@
                     } else {
                         this.stopCamera();
                         this.fotoKamera = false;
+                    }
+                },
+                metodeInput(newValue) {
+                    if (newValue === 'kamera') {
+                        this.$nextTick(() => {
+                            this.startScanner();
+                        });
+                    } else {
+                        this.stopScanner();
+                        this.serialTerdeteksi = false;
                     }
                 }
             }
