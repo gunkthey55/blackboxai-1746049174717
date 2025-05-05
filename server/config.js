@@ -1,7 +1,12 @@
 const config = {
-    mongoURI: process.env.MONGODB_URI || "mongodb+srv://verceladmin:Denpasar123@cluster0.yl3phed.mongodb.net/sistem_manajemen_part?retryWrites=true&w=majority&appName=Cluster0",
-    dbName: "sistem_manajemen_part",
+    mongoURI: process.env.MONGODB_URI,
+    dbName: process.env.MONGODB_DB || "sistem_manajemen_part",
     port: process.env.PORT || 3001
 };
+
+if (!config.mongoURI) {
+    console.error('MONGODB_URI environment variable is not set');
+    process.exit(1);
+}
 
 module.exports = config;

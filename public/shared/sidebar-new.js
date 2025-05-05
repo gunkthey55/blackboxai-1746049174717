@@ -50,7 +50,7 @@ class Sidebar {
 
     // Method to initialize sidebar for Vue.js
     initVue() {
-        const { createApp } = Vue;
+        const { createApp, nextTick } = Vue;
         
         createApp({
             template: this.template,
@@ -60,8 +60,10 @@ class Sidebar {
                 };
             },
             mounted() {
-                this.highlightCurrentPage();
-                this.initSidebarToggle();
+                nextTick(() => {
+                    this.highlightCurrentPage();
+                    this.initSidebarToggle();
+                });
             },
             methods: {
                 highlightCurrentPage() {

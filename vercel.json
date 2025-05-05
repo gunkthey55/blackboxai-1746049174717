@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "public": true,
+  "buildCommand": "npm install",
+  "outputDirectory": "public",
   "builds": [
     {
       "src": "public/**/*",
@@ -14,23 +15,31 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "server/index-mongodb.js"
+      "dest": "/server/index-mongodb.js"
     },
     {
       "src": "/uploads/(.*)",
-      "dest": "server/index-mongodb.js"
+      "dest": "/server/index-mongodb.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/public/$1",
-      "continue": true
+      "src": "/shared/(.*)",
+      "dest": "/public/shared/$1"
     },
     {
-      "handle": "filesystem"
+      "src": "/(.*\\.js)",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/(.*\\.html)",
+      "dest": "/public/$1"
     },
     {
       "src": "/(.*)",
       "dest": "/public/index.html"
     }
-  ]
+  ],
+  "env": {
+    "MONGODB_URI": "@mongodb-uri",
+    "NODE_ENV": "production"
+  }
 }

@@ -13,14 +13,30 @@ const PORT = config.port;
 // MongoDB Connection
 let db;
 
+let cachedClient = null;
+let cachedDb = null;
+
 async function connectToMongo() {
+    if (cachedClient && cachedDb) {
+        return { client: cachedClient, db: cachedDb };
+    }
+
     try {
         console.log('Attempting to connect to MongoDB...');
-        const client = new MongoClient(config.mongoURI);
+        const client = new MongoClient(config.mongoURI, {
+            maxPoolSize: 1,
+            serverSelectionTimeoutMS: 5000
+        });
+        
         await client.connect();
         console.log('Connected to MongoDB Atlas');
-        db = client.db(config.dbName);
-        return client;
+        
+        const db = client.db(config.dbName);
+        
+        cachedClient = client;
+        cachedDb = db;
+        
+        return { client, db };
     } catch (error) {
         console.error('MongoDB connection error:', error);
         throw error;
@@ -215,30 +231,23 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
+// Initialize database connection
+connectToMongo().then(({ db: database }) => {
+    db = database;
+}).catch(error => {
+    console.error('Failed to initialize database connection:', error);
+    process.exit(1);
+});
+
 // Start server
-async function startServer() {
-    try {
-        const client = await connectToMongo();
-        console.log('MongoDB connected successfully');
-
-        app.listen(PORT, () => {
-            console.log(`Server berjalan di http://localhost:${PORT}`);
-        });
-
-        // Handle graceful shutdown
-        process.on('SIGTERM', async () => {
-            console.log('SIGTERM received. Shutting down gracefully...');
-            await client.close();
-            process.exit(0);
-        });
-
-    } catch (error) {
-        console.error('Failed to start server:', error);
-        process.exit(1);
-    }
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server berjalan di http://localhost:${PORT}`);
+    });
 }
 
-startServer().catch(console.error);
+// Export app for Vercel
+module.exports = app;
 
 // Error handling
 process.on('uncaughtException', (error) => {
